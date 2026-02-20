@@ -1,4 +1,4 @@
-package backend.academy.linktracker.bot;
+package backend.academy.linktracker;
 
 import com.redis.testcontainers.RedisContainer;
 import org.springframework.boot.test.context.TestConfiguration;
