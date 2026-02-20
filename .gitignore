@@ -51,3 +51,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# ENV files
+.env
+bot/.env
+**/.env
