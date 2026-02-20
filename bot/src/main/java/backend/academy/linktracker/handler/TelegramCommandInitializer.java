@@ -6,6 +6,8 @@ import com.pengrad.telegrambot.request.SetMyCommands;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,9 +16,15 @@ import org.springframework.stereotype.Component;
 public class TelegramCommandInitializer {
 
     private final TelegramBot telegramBot;
+    private final Environment environment;
 
     @PostConstruct
     public void initMethod() {
+        if (isTestEnvironment()) {
+            log.info("Test environment detected, skipping setMyCommands");
+            return;
+        }
+
         log.info("Настройка меню команд бота...");
 
         BotCommand[] commands = {
@@ -36,5 +44,9 @@ public class TelegramCommandInitializer {
                     response.errorCode(),
                     response.description());
         }
+    }
+
+    private boolean isTestEnvironment() {
+        return environment.acceptsProfiles(Profiles.of("test"));
     }
 }
