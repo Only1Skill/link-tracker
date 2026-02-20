@@ -23,20 +23,25 @@ public class TelegramBotService {
 
     @PostConstruct
     public void init() {
-        telegramBot.setUpdatesListener(updates -> {
-            try {
-                updates.forEach(this::processUpdate);
-            } catch (Exception e) {
-                log.error("On TELEGRAM Updates error {}", e.toString());
-            }
-            return UpdatesListener.CONFIRMED_UPDATES_ALL;
-        }, e -> {
-            if (e.response() != null) {
-                log.warn("TELEGRAM ERR: {} - {}", e.response().errorCode(), e.response().description());
-            } else {
-                e.printStackTrace();
-            }
-        });
+        telegramBot.setUpdatesListener(
+                updates -> {
+                    try {
+                        updates.forEach(this::processUpdate);
+                    } catch (Exception e) {
+                        log.error("On TELEGRAM Updates error {}", e.toString());
+                    }
+                    return UpdatesListener.CONFIRMED_UPDATES_ALL;
+                },
+                e -> {
+                    if (e.response() != null) {
+                        log.warn(
+                                "TELEGRAM ERR: {} - {}",
+                                e.response().errorCode(),
+                                e.response().description());
+                    } else {
+                        e.printStackTrace();
+                    }
+                });
         logger.info("Телеграм бот запущен и слушает обновления");
     }
 

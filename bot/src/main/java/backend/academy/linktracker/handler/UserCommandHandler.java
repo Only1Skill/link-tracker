@@ -3,7 +3,7 @@ package backend.academy.linktracker.handler;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserCommandHandler implements CommandHandler{
+public class UserCommandHandler implements CommandHandler {
     @Override
     public String handleStart() {
         return """

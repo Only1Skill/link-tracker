@@ -1,8 +1,9 @@
 package backend.academy.linktracker;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import backend.academy.linktracker.handler.UserCommandHandler;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.assertThat;
 
 class UserCommandHandlerTest {
 
@@ -13,10 +14,10 @@ class UserCommandHandlerTest {
         String result = handler.handleStart();
 
         assertThat(result)
-            .isNotEmpty()
-            .contains("Добро пожаловать")
-            .contains("/help")
-            .contains("отслеживания изменений на сайтах");
+                .isNotEmpty()
+                .contains("Добро пожаловать")
+                .contains("/help")
+                .contains("отслеживания изменений на сайтах");
     }
 
     @Test
@@ -24,20 +25,17 @@ class UserCommandHandlerTest {
         String result = handler.handleHelp();
 
         assertThat(result)
-            .isNotEmpty()
-            .contains("/start")
-            .contains("/help")
-            .contains("Начало работы")
-            .contains("Показать это сообщение");
+                .isNotEmpty()
+                .contains("/start")
+                .contains("/help")
+                .contains("Начало работы")
+                .contains("Показать это сообщение");
     }
 
     @Test
     void handleUnknown_ShouldReturnErrorMessage() {
         String result = handler.handleUnknown();
 
-        assertThat(result)
-            .isNotEmpty()
-            .contains("не понимаю")
-            .contains("/help");
+        assertThat(result).isNotEmpty().contains("не понимаю").contains("/help");
     }
 }

@@ -31,7 +31,10 @@ public class TelegramCommandInitializer {
         if (response.isOk()) {
             log.info("Успешная установка команд в меню!");
         } else {
-            log.info("Не удалось установить команды в меню. Код ошибки: {}, описание: {}", response.errorCode(), response.description());
+            log.info(
+                    "Не удалось установить команды в меню. Код ошибки: {}, описание: {}",
+                    response.errorCode(),
+                    response.description());
         }
     }
 }
