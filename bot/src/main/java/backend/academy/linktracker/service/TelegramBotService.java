@@ -1,51 +1,29 @@
 package backend.academy.linktracker.service;
 
-import backend.academy.linktracker.handler.UserCommandHandler;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.UpdatesListener;
+import backend.academy.linktracker.command.BotCommand;
+import backend.academy.linktracker.command.CommandRegistry;
+import backend.academy.linktracker.port.TelegramClient;
+import backend.academy.linktracker.port.UpdateHandler;
 import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.request.SendMessage;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TelegramBotService {
-    private final TelegramBot telegramBot;
-    private final UserCommandHandler userCommandHandler;
-
-    Logger logger = LoggerFactory.getLogger(TelegramBotService.class);
+public class TelegramBotService implements UpdateHandler {
+    private final TelegramClient telegramClient;
+    private final CommandRegistry commandRegistry;
 
     @PostConstruct
     public void init() {
-        telegramBot.setUpdatesListener(
-                updates -> {
-                    try {
-                        updates.forEach(this::processUpdate);
-                    } catch (Exception e) {
-                        log.error("On TELEGRAM Updates error {}", e.toString());
-                    }
-                    return UpdatesListener.CONFIRMED_UPDATES_ALL;
-                },
-                e -> {
-                    if (e.response() != null) {
-                        log.warn(
-                                "TELEGRAM ERR: {} - {}",
-                                e.response().errorCode(),
-                                e.response().description());
-                    } else {
-                        e.printStackTrace();
-                    }
-                });
-        logger.info("Телеграм бот запущен и слушает обновления");
+        telegramClient.startPolling(this);
+        log.info("Телеграм бот запущен и слушает обновления");
     }
 
-    void processUpdate(Update update) {
+    public void handle(Update update) {
         if (update.message() == null || update.message().text() == null) {
             return;
         }
@@ -53,20 +31,19 @@ public class TelegramBotService {
         long chatId = update.message().chat().id();
         String messageText = update.message().text();
 
-        log.info("Received message: chatId{}, text={}, length={}", chatId, messageText, messageText.length());
+        log.atInfo()
+                .addKeyValue("chatId", chatId)
+                .addKeyValue("text", messageText)
+                .addKeyValue("length", messageText.length())
+                .addKeyValue("userId", update.message().from().id())
+                .log("Получено сообщение");
 
-        String response;
-        if ("/start".equals(messageText)) {
-            response = userCommandHandler.handleStart();
-        } else if ("/help".equals(messageText)) {
-            response = userCommandHandler.handleHelp();
-        } else {
-            response = userCommandHandler.handleUnknown();
-        }
-        sendMessage(chatId, response);
-    }
+        String[] parts = messageText.split("\\s+", 2);
+        String commandKey = parts[0].toLowerCase();
 
-    private void sendMessage(long chatId, String message) {
-        telegramBot.execute(new SendMessage(chatId, message));
+        BotCommand strategy = commandRegistry.getStrategy(commandKey);
+        String response = strategy.execute(update);
+
+        telegramClient.sendMessage(chatId, response);
     }
 }
