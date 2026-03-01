@@ -2,16 +2,22 @@ package backend.academy.linktracker.port.impl;
 
 import backend.academy.linktracker.port.TelegramClient;
 import backend.academy.linktracker.port.UpdateHandler;
+import backend.academy.linktracker.port.dto.CommandInfo;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.BotCommand;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SetMyCommands;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Profile("!test")
 public class TelegramAdapter implements TelegramClient {
     private final TelegramBot telegramBot;
 
@@ -44,5 +50,28 @@ public class TelegramAdapter implements TelegramClient {
                         log.error("Ошибка бота", e);
                     }
                 });
+    }
+
+    @Override
+    public void setCommands(List<CommandInfo> commands) {
+        if (commands == null || commands.isEmpty()) {
+            log.warn("Нет команд для отображения в меню");
+            return;
+        }
+
+        BotCommand[] botCommands = commands.stream()
+                .map(cmd -> new BotCommand(cmd.command(), cmd.description()))
+                .toArray(BotCommand[]::new);
+
+        var response = telegramBot.execute(new SetMyCommands(botCommands));
+
+        if (response.isOk()) {
+            log.info("Успешно установлено {} команд в меню", commands.size());
+        } else {
+            log.error(
+                    "Не удалось установить команды в меню. Код ошибки: {}, описание: {}",
+                    response.errorCode(),
+                    response.description());
+        }
     }
 }
