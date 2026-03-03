@@ -1,23 +1,23 @@
 package backend.academy.linktracker.port.impl;
 
+import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.port.TelegramClient;
 import backend.academy.linktracker.port.UpdateHandler;
-import backend.academy.linktracker.port.dto.CommandInfo;
+import backend.academy.linktracker.port.dto.UpdateData;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.BotCommand;
+import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SetMyCommands;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Profile("!test")
 public class TelegramAdapter implements TelegramClient {
     private final TelegramBot telegramBot;
 
@@ -31,7 +31,10 @@ public class TelegramAdapter implements TelegramClient {
         telegramBot.setUpdatesListener(
                 updates -> {
                     try {
-                        updates.forEach(handler::handle);
+                        updates.stream()
+                                .map(this::convertToUpdateData)
+                                .filter(updateData -> updateData != null)
+                                .forEach(handler::handle);
                     } catch (Exception e) {
                         log.atError()
                                 .setCause(e)
@@ -53,14 +56,14 @@ public class TelegramAdapter implements TelegramClient {
     }
 
     @Override
-    public void setCommands(List<CommandInfo> commands) {
+    public void setCommands(List<BotCommandCreation> commands) {
         if (commands == null || commands.isEmpty()) {
             log.warn("Нет команд для отображения в меню");
             return;
         }
 
         BotCommand[] botCommands = commands.stream()
-                .map(cmd -> new BotCommand(cmd.command(), cmd.description()))
+                .map(cmd -> new BotCommand(cmd.getCommand(), cmd.getDescription()))
                 .toArray(BotCommand[]::new);
 
         var response = telegramBot.execute(new SetMyCommands(botCommands));
@@ -73,5 +76,22 @@ public class TelegramAdapter implements TelegramClient {
                     response.errorCode(),
                     response.description());
         }
+    }
+
+    private UpdateData convertToUpdateData(Update update) {
+        if (update.message() == null || update.message().text() == null) {
+            return null;
+        }
+
+        var message = update.message();
+        var chat = message.chat();
+        var from = message.from();
+
+        return new UpdateData(
+                update.updateId(),
+                chat.id(),
+                message.text(),
+                from != null ? from.id() : null,
+                from != null ? from.username() : null);
     }
 }
