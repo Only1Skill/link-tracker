@@ -1,8 +1,8 @@
 package backend.academy.linktracker.port;
 
-import com.pengrad.telegrambot.model.Update;
+import backend.academy.linktracker.port.dto.UpdateData;
 
 @FunctionalInterface
 public interface UpdateHandler {
-    void handle(Update update);
+    void handle(UpdateData updateData);
 }

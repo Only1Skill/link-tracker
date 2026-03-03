@@ -1,6 +1,6 @@
 package backend.academy.linktracker.port;
 
-import backend.academy.linktracker.port.dto.CommandInfo;
+import backend.academy.linktracker.command.BotCommandCreation;
 import java.util.List;
 
 public interface TelegramClient {
@@ -8,5 +8,5 @@ public interface TelegramClient {
 
     void startPolling(UpdateHandler updateHandler);
 
-    void setCommands(List<CommandInfo> commands);
+    void setCommands(List<BotCommandCreation> commands);
 }
