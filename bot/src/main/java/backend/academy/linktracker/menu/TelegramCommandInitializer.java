@@ -1,8 +1,8 @@
 package backend.academy.linktracker.menu;
 
-import backend.academy.linktracker.command.CommandRegistry;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.command.impl.CommandRegistryImpl;
 import backend.academy.linktracker.port.TelegramClient;
-import backend.academy.linktracker.port.dto.CommandInfo;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +17,15 @@ import org.springframework.stereotype.Component;
 public class TelegramCommandInitializer {
 
     private final TelegramClient telegramClient;
-    private final CommandRegistry commandRegistry;
+    private final CommandRegistryImpl commandRegistry;
 
     @PostConstruct
     public void initMethod() {
         log.info("Настройка меню команд бота...");
 
-        List<CommandInfo> commands = commandRegistry.getAllCommands().stream()
-                .map(cmd -> new CommandInfo(cmd.getCommand(), cmd.getDescription()))
-                .filter(cmd -> cmd.description() != null && !cmd.description().isEmpty())
+        List<BotCommandCreation> commands = commandRegistry.getAllCommands().stream()
+                .filter(cmd ->
+                        cmd.getDescription() != null && !cmd.getDescription().isEmpty())
                 .toList();
 
         telegramClient.setCommands(commands);

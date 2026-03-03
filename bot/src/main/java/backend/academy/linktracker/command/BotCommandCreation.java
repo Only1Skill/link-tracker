@@ -1,18 +1,18 @@
 package backend.academy.linktracker.command;
 
-import com.pengrad.telegrambot.model.Update;
+import backend.academy.linktracker.port.dto.UpdateData;
 
 /**
  * Интерфейс стратегии для обработки команд бота.
  */
-public interface BotCommand {
+public interface BotCommandCreation {
     /**
      * Выполнить команду
      *
-     * @param update входящее обновление от Telegram
+     * @param updateData входящее обновление от Telegram
      * @return текст ответа
      */
-    String execute(Update update);
+    String execute(UpdateData updateData);
 
     /**
      * @return текст команды (например, "/start")

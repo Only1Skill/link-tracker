@@ -1,26 +1,24 @@
 package backend.academy.linktracker.command.impl;
 
-import backend.academy.linktracker.command.BotCommand;
-import backend.academy.linktracker.command.CommandRegistry;
-import com.pengrad.telegrambot.model.Update;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.port.dto.UpdateData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component("/help")
-public class HelpCommand implements BotCommand {
-    private final CommandRegistry commandRegistry;
+public class HelpCommand implements BotCommandCreation {
+    private final CommandRegistryImpl commandRegistry;
 
-    public HelpCommand(@Lazy CommandRegistry commandRegistry) {
-        this.commandRegistry = commandRegistry;
+    public HelpCommand(@Lazy CommandRegistryImpl commandRegistryImpl) {
+        this.commandRegistry = commandRegistryImpl;
     }
 
     @Override
-    public String execute(Update update) {
-        Long chatId = update.message().chat().id();
+    public String execute(UpdateData updateData) {
         log.atInfo()
-                .addKeyValue("chatId", chatId)
+                .addKeyValue("chatId", updateData.chatId())
                 .addKeyValue("getCommand", getCommand())
                 .log("Инициализация команды help");
 

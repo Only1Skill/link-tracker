@@ -1,13 +1,13 @@
 package backend.academy.linktracker.command.impl;
 
-import backend.academy.linktracker.command.BotCommand;
-import com.pengrad.telegrambot.model.Update;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.port.dto.UpdateData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component("/start")
-public class StartCommand implements BotCommand {
+public class StartCommand implements BotCommandCreation {
     private static final String RESPONSE = """
         Добро пожаловать! Я бот для отслеживания изменений на сайтах.
 
@@ -17,10 +17,9 @@ public class StartCommand implements BotCommand {
         """;
 
     @Override
-    public String execute(Update update) {
-        Long chatId = update.message().chat().id();
+    public String execute(UpdateData updateData) {
         log.atInfo()
-                .addKeyValue("chatId", chatId)
+                .addKeyValue("chatId", updateData.chatId())
                 .addKeyValue("getCommand", getCommand())
                 .log("Инициализация стартовой команды");
         return RESPONSE;
