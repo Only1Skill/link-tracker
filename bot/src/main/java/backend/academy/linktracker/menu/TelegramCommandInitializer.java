@@ -1,7 +1,7 @@
 package backend.academy.linktracker.menu;
 
 import backend.academy.linktracker.command.BotCommandCreation;
-import backend.academy.linktracker.command.impl.CommandRegistryImpl;
+import backend.academy.linktracker.command.CommandRegistry;
 import backend.academy.linktracker.port.TelegramClient;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class TelegramCommandInitializer {
 
     private final TelegramClient telegramClient;
-    private final CommandRegistryImpl commandRegistry;
+    private final CommandRegistry commandRegistry;
 
     @PostConstruct
     public void initMethod() {

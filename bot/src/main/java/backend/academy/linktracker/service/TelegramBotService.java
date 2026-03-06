@@ -1,6 +1,6 @@
 package backend.academy.linktracker.service;
 
-import backend.academy.linktracker.command.impl.CommandRegistryImpl;
+import backend.academy.linktracker.command.CommandRegistry;
 import backend.academy.linktracker.port.TelegramClient;
 import backend.academy.linktracker.port.UpdateHandler;
 import backend.academy.linktracker.port.dto.UpdateData;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TelegramBotService implements UpdateHandler {
     private final TelegramClient telegramClient;
-    private final CommandRegistryImpl commandRegistry;
+    private final CommandRegistry commandRegistry;
 
     private static final String UNKNOWN_COMMAND_RESPONSE =
             "Извините, я не понимаю эту команду. Используйте /help для списка команд.";
