@@ -9,8 +9,9 @@ import backend.academy.linktracker.service.state.UserStateManager;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import java.util.Arrays;
 
 @Slf4j
 @Service
@@ -19,15 +20,17 @@ public class TelegramBotService implements UpdateHandler {
     private final TelegramClient telegramClient;
     private final CommandRegistry commandRegistry;
     private final UserStateManager userStateManager;
+    private final Environment environment;
 
     private static final String UNKNOWN_COMMAND_RESPONSE =
             "Извините, я не понимаю эту команду. Используйте /help для списка команд.";
 
     @PostConstruct
-    @Profile("!test")
     public void init() {
-        telegramClient.startPolling(this);
-        log.info("Телеграм бот запущен и слушает обновления");
+        if (!Arrays.asList(environment.getActiveProfiles()).contains("test")) {
+            telegramClient.startPolling(this);
+            log.info("Телеграм бот запущен и слушает обновления");
+        }
     }
 
     public void handle(UpdateData updateData) {

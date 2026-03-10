@@ -13,6 +13,7 @@ import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class LinkService {
      * @throws ChatNotFoundException  если чат не зарегистрирован
      * @throws LinkDuplicateException если ссылка уже отслеживается в этом чате
      */
+    @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public LinkResponse addLink(Long chatId, AddLinkRequest request) {
         if (!chatRepository.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
@@ -87,6 +89,7 @@ public class LinkService {
      * @throws ChatNotFoundException если чат не зарегистрирован
      * @throws LinkNotFoundException если ссылка не найдена
      */
+    @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public void removeLink(Long chatId, String url) {
         if (!chatRepository.exists(chatId)) {
             throw new ChatNotFoundException(chatId);

@@ -4,6 +4,7 @@ import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
 import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.service.LinkService;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +30,7 @@ public class LinkController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
+    @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public LinkResponse addLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
         List<String> safeTags = request.getTags() == null
                 ? null
