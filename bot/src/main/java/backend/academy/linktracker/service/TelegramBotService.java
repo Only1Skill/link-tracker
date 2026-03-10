@@ -7,11 +7,11 @@ import backend.academy.linktracker.dto.UpdateData;
 import backend.academy.linktracker.service.state.TrackState;
 import backend.academy.linktracker.service.state.UserStateManager;
 import jakarta.annotation.PostConstruct;
+import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import java.util.Arrays;
 
 @Slf4j
 @Service
