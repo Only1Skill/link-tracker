@@ -9,6 +9,7 @@ import backend.academy.linktracker.service.state.UserStateManager;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -23,6 +24,7 @@ public class TelegramBotService implements UpdateHandler {
             "Извините, я не понимаю эту команду. Используйте /help для списка команд.";
 
     @PostConstruct
+    @Profile("!test")
     public void init() {
         telegramClient.startPolling(this);
         log.info("Телеграм бот запущен и слушает обновления");

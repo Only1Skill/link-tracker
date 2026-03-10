@@ -33,8 +33,7 @@ public class LinkController {
         List<String> safeTags = request.getTags() == null
                 ? null
                 : request.getTags().stream().map(LogSanitizer::sanitize).collect(Collectors.toList());
-        String safeLink = LogSanitizer.sanitize(request.getLink());
-        log.info("Add link for chat {}: link={}, tags={}", chatId, safeLink, safeTags);
+        log.info("Add link for chat {}: link={}, tags={}", chatId, LogSanitizer.sanitize(request.getLink()), safeTags);
         return linkService.addLink(chatId, request);
     }
 

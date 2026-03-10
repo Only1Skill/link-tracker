@@ -51,7 +51,7 @@ public class LinkService {
                 .build();
 
         Link saved = linkRepository.save(chatId, link);
-        log.info("Link added: {} for chat {}", LogSanitizer.sanitize(saved.getUrl()), chatId);
+        log.info("Link added: {} for chat {}", LogSanitizer.sanitize(LogSanitizer.sanitize(saved.getUrl())), chatId);
 
         return mapToResponse(saved);
     }
@@ -95,7 +95,7 @@ public class LinkService {
         Link link = linkRepository.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
         linkRepository.delete(chatId, url);
-        log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
+        log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(LogSanitizer.sanitize(link.getUrl())), chatId);
     }
 
     private LinkResponse mapToResponse(Link link) {
