@@ -4,7 +4,6 @@ import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.UpdateData;
 import backend.academy.linktracker.service.CommandExecutor;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

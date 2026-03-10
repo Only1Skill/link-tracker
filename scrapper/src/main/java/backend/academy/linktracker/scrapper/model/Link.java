@@ -3,7 +3,6 @@ package backend.academy.linktracker.scrapper.model;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 

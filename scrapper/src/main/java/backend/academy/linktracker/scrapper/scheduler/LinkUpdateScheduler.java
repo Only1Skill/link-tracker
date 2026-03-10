@@ -7,7 +7,6 @@ import backend.academy.linktracker.scrapper.client.dto.GitHubRepositoryResponse;
 import backend.academy.linktracker.scrapper.client.dto.StackOverflowResponse;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
 import backend.academy.linktracker.scrapper.model.Link;
-import backend.academy.linktracker.scrapper.properties.GithubProperties;
 import backend.academy.linktracker.scrapper.properties.StackoverflowProperties;
 import backend.academy.linktracker.scrapper.repository.LinkRepository;
 import backend.academy.linktracker.scrapper.util.LinkParser;
@@ -100,7 +99,7 @@ public class LinkUpdateScheduler {
                     stackoverflowProperties.getAccessToken()
                 );
                 if (response.items() != null && !response.items().isEmpty()) {
-                    Long lastActivity = response.items().get(0).lastActivityDate();
+                    Long lastActivity = response.items().getFirst().lastActivityDate();
                     return OffsetDateTime.ofInstant(
                         java.time.Instant.ofEpochSecond(lastActivity),
                         ZoneOffset.UTC

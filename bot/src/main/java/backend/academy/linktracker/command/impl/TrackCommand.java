@@ -1,7 +1,6 @@
 package backend.academy.linktracker.command.impl;
 
 import backend.academy.linktracker.client.ScrapperClient;
-import backend.academy.linktracker.client.impl.ScrapperRestClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.AddLinkRequest;
 import backend.academy.linktracker.dto.UpdateData;

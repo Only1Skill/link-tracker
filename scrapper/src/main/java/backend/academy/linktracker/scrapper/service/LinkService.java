@@ -72,7 +72,7 @@ public class LinkService {
         if (tag != null && !tag.isBlank()) {
             links = links.stream()
                 .filter(link -> link.getTags() != null && link.getTags().contains(tag))
-                .collect(Collectors.toList());
+                .toList();
         }
 
         return links.stream()
