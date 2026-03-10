@@ -8,6 +8,7 @@ import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
 import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.repository.ChatRepository;
 import backend.academy.linktracker.scrapper.repository.LinkRepository;
+import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -50,7 +51,7 @@ public class LinkService {
                 .build();
 
         Link saved = linkRepository.save(chatId, link);
-        log.info("Link added: {} for chat {}", saved.getUrl(), chatId);
+        log.info("Link added: {} for chat {}", LogSanitizer.sanitize(saved.getUrl()), chatId);
 
         return mapToResponse(saved);
     }
@@ -59,7 +60,7 @@ public class LinkService {
      * Получить все ссылки чата, опционально фильтруя по тегу.
      *
      * @param chatId идентификатор чата
-     * @param tag тег для фильтрации (может быть null)
+     * @param tag    тег для фильтрации (может быть null)
      * @return список LinkResponse
      * @throws ChatNotFoundException если чат не зарегистрирован
      */
@@ -94,7 +95,7 @@ public class LinkService {
         Link link = linkRepository.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
         linkRepository.delete(chatId, url);
-        log.info("Link removed: {} for chat {}", url, chatId);
+        log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
     }
 
     private LinkResponse mapToResponse(Link link) {

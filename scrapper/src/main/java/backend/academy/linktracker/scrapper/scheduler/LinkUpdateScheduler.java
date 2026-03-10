@@ -10,6 +10,7 @@ import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.properties.StackoverflowProperties;
 import backend.academy.linktracker.scrapper.repository.LinkRepository;
 import backend.academy.linktracker.scrapper.util.LinkParser;
+import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -42,7 +43,7 @@ public class LinkUpdateScheduler {
             try {
                 processUrl(url, linksWithSameUrl);
             } catch (Exception e) {
-                log.error("Ошибка в получении ссылки: {}", url, e);
+                log.error("Ошибка в получении ссылки: {}", LogSanitizer.sanitize(url), e);
             }
         }
         log.info("Завершение обновления ссылок");
@@ -57,7 +58,7 @@ public class LinkUpdateScheduler {
         OffsetDateTime currentLastUpdate = links.getFirst().getLastUpdateTime();
 
         if (lastUpdateFromApi.isAfter(currentLastUpdate)) {
-            log.info("Обнаружено обновление для ссылки: {}", url);
+            log.info("Обнаружено обновление для ссылки: {}", LogSanitizer.sanitize(url));
             links.forEach(link -> link.setLastUpdateTime(lastUpdateFromApi));
 
             List<Long> chatIds = links.stream().map(Link::getChatId).collect(Collectors.toList());
@@ -65,7 +66,7 @@ public class LinkUpdateScheduler {
             LinkUpdate update = new LinkUpdate(links.getFirst().getId(), url, "Появились новые изменения!", chatIds);
             botClient.sendUpdate(update);
         } else {
-            log.info("Нет обновлений для ссылки: {}", url);
+            log.info("Нет обновлений для ссылки: {}", LogSanitizer.sanitize(url));
         }
     }
 
@@ -76,7 +77,7 @@ public class LinkUpdateScheduler {
                 GitHubRepositoryResponse response = gitHubClient.fetchRepository(gitHubData.owner(), gitHubData.repo());
                 return response.updatedAt();
             } catch (Exception e) {
-                log.error("GitHub API ошибка в ссылке: {}", url, e);
+                log.error("GitHub API ошибка в ссылке: {}", LogSanitizer.sanitize(url), e);
                 return null;
             }
         }
@@ -94,11 +95,11 @@ public class LinkUpdateScheduler {
                     return OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(lastActivity), ZoneOffset.UTC);
                 }
             } catch (Exception e) {
-                log.error("StackOverflow API ошибка в ссылке: {}", url, e);
+                log.error("StackOverflow API ошибка в ссылке: {}", LogSanitizer.sanitize(url), e);
             }
         }
 
-        log.warn("Неправильная ссылка: {}", url);
+        log.warn("Неправильная ссылка: {}", LogSanitizer.sanitize(url));
         return null;
     }
 }

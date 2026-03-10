@@ -3,8 +3,10 @@ package backend.academy.linktracker.scrapper.controller;
 import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
 import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.service.LinkService;
+import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -28,7 +30,11 @@ public class LinkController {
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
     public LinkResponse addLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
-        log.info("Add link for chat {}: {}", chatId, request);
+        List<String> safeTags = request.getTags() == null
+                ? null
+                : request.getTags().stream().map(LogSanitizer::sanitize).collect(Collectors.toList());
+        String safeLink = LogSanitizer.sanitize(request.getLink());
+        log.info("Add link for chat {}: link={}, tags={}", chatId, safeLink, safeTags);
         return linkService.addLink(chatId, request);
     }
 

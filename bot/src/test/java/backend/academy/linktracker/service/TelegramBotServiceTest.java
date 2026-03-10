@@ -4,23 +4,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 
+import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.client.TelegramClient;
+import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.command.impl.CommandRegistryImpl;
 import backend.academy.linktracker.command.impl.HelpCommand;
 import backend.academy.linktracker.command.impl.StartCommand;
 import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.service.state.UserStateManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
@@ -29,19 +33,44 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 class TelegramBotServiceTest {
 
     @Configuration
-    @Import({TelegramBotService.class, CommandRegistryImpl.class, StartCommand.class, HelpCommand.class})
+    @Import({TelegramBotService.class, CommandRegistryImpl.class})
     static class TestConfig {
 
         @Bean
         public TelegramClient telegramClient() {
-            return org.mockito.Mockito.mock(TelegramClient.class);
+            return Mockito.mock(TelegramClient.class);
+        }
+
+        @Bean
+        public ScrapperClient scrapperClient() {
+            return Mockito.mock(ScrapperClient.class);
+        }
+
+        @Bean
+        public CommandExecutor commandExecutor(TelegramClient telegramClient) {
+            return new CommandExecutor(telegramClient);
+        }
+
+        @Bean
+        public UserStateManager userStateManager() {
+            return new UserStateManager();
+        }
+
+        @Bean
+        public BotCommandCreation startCommand(ScrapperClient scrapperClient, CommandExecutor commandExecutor) {
+            return new StartCommand(scrapperClient, commandExecutor);
+        }
+
+        @Bean
+        public BotCommandCreation helpCommand(@Lazy CommandRegistryImpl commandRegistry) {
+            return new HelpCommand(commandRegistry);
         }
     }
 
     @Autowired
     private TelegramBotService telegramBotService;
 
-    @MockitoBean
+    @Autowired
     private TelegramClient telegramClient;
 
     private ArgumentCaptor<String> messageCaptor;

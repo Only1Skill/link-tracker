@@ -2,6 +2,7 @@ package backend.academy.linktracker.scrapper.client.impl;
 
 import backend.academy.linktracker.scrapper.client.BotClient;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
+import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
@@ -20,13 +21,14 @@ public class BotRestClient implements BotClient {
                     .uri("/updates")
                     .body(update)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        log.error("Bot returned error: {} - {}", res.getStatusCode(), res.getStatusText());
-                    })
+                    .onStatus(HttpStatusCode::isError, (_, res) ->
+                        log.error("Бот вернул ошибку: {} - {}",
+                            res.getStatusCode(),
+                            LogSanitizer.sanitize(res.getStatusText())))
                     .toBodilessEntity();
-            log.info("Update sent to bot for link id: {}", update.id());
+            log.info("Обновление, отправленное боту для получения идентификатора ссылки: {}", update.id());
         } catch (Exception e) {
-            log.error("Failed to send update to bot", e);
+            log.error("Не удалось отправить обновление боту", e);
         }
     }
 }
