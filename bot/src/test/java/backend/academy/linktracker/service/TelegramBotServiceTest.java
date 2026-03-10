@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 
+import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.command.impl.CommandRegistryImpl;
 import backend.academy.linktracker.command.impl.HelpCommand;
 import backend.academy.linktracker.command.impl.StartCommand;
-import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.dto.UpdateData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

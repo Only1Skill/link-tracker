@@ -20,6 +20,7 @@ class HelpCommandTest {
 
     @Mock
     private CommandRegistryImpl commandRegistry;
+
     private HelpCommand helpCommand;
 
     @BeforeEach

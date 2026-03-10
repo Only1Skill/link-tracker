@@ -10,15 +10,15 @@ import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.properties.StackoverflowProperties;
 import backend.academy.linktracker.scrapper.repository.LinkRepository;
 import backend.academy.linktracker.scrapper.util.LinkParser;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -34,8 +34,7 @@ public class LinkUpdateScheduler {
     public void updateLinks() {
         log.info("Начинаю запланированное обновление ссылок");
         List<Link> allLinks = linkRepository.findAll();
-        Map<String, List<Link>> linksByUrl = allLinks.stream()
-            .collect(Collectors.groupingBy(Link::getUrl));
+        Map<String, List<Link>> linksByUrl = allLinks.stream().collect(Collectors.groupingBy(Link::getUrl));
 
         for (Map.Entry<String, List<Link>> entry : linksByUrl.entrySet()) {
             String url = entry.getKey();
@@ -61,16 +60,9 @@ public class LinkUpdateScheduler {
             log.info("Обнаружено обновление для ссылки: {}", url);
             links.forEach(link -> link.setLastUpdateTime(lastUpdateFromApi));
 
-            List<Long> chatIds = links.stream()
-                .map(Link::getChatId)
-                .collect(Collectors.toList());
+            List<Long> chatIds = links.stream().map(Link::getChatId).collect(Collectors.toList());
 
-            LinkUpdate update = new LinkUpdate(
-                links.getFirst().getId(),
-                url,
-                "Появились новые изменения!",
-                chatIds
-            );
+            LinkUpdate update = new LinkUpdate(links.getFirst().getId(), url, "Появились новые изменения!", chatIds);
             botClient.sendUpdate(update);
         } else {
             log.info("Нет обновлений для ссылки: {}", url);
@@ -93,17 +85,13 @@ public class LinkUpdateScheduler {
         if (stackOverflowData != null) {
             try {
                 StackOverflowResponse response = stackOverflowClient.fetchQuestions(
-                    stackOverflowData.questionId(),
-                    "stackoverflow",
-                    stackoverflowProperties.getKey(),
-                    stackoverflowProperties.getAccessToken()
-                );
+                        stackOverflowData.questionId(),
+                        "stackoverflow",
+                        stackoverflowProperties.getKey(),
+                        stackoverflowProperties.getAccessToken());
                 if (response.items() != null && !response.items().isEmpty()) {
                     Long lastActivity = response.items().getFirst().lastActivityDate();
-                    return OffsetDateTime.ofInstant(
-                        java.time.Instant.ofEpochSecond(lastActivity),
-                        ZoneOffset.UTC
-                    );
+                    return OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(lastActivity), ZoneOffset.UTC);
                 }
             } catch (Exception e) {
                 log.error("StackOverflow API ошибка в ссылке: {}", url, e);

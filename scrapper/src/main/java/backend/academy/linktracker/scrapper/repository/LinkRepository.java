@@ -27,13 +27,13 @@ public class LinkRepository {
 
     public Optional<Link> findByChatIdAndUrl(long chatId, String url) {
         return storage.getOrDefault(chatId, new ArrayList<>()).stream()
-            .filter(link -> link.getUrl().equals(url))
-            .findFirst();
+                .filter(link -> link.getUrl().equals(url))
+                .findFirst();
     }
 
     public void delete(Long chatId, String url) {
         storage.getOrDefault(chatId, new ArrayList<>())
-            .removeIf(link -> link.getUrl().equals(url));
+                .removeIf(link -> link.getUrl().equals(url));
     }
 
     public void deleteByChatId(Long chatId) {
@@ -46,8 +46,8 @@ public class LinkRepository {
 
     public List<Link> findAllByUrl(String url) {
         return storage.values().stream()
-            .flatMap(List::stream)
-            .filter(link -> link.getUrl().equals(url))
-            .collect(Collectors.toList());
+                .flatMap(List::stream)
+                .filter(link -> link.getUrl().equals(url))
+                .collect(Collectors.toList());
     }
 }

@@ -28,10 +28,9 @@ public class StartCommand implements BotCommandCreation {
         Long chatId = updateData.chatId();
 
         commandExecutor.executeScrapperCallVoid(
-            () -> scrapperClient.registerChat(chatId),
-            chatId,
-            "Не удалось зарегистрировать чат. Попробуйте позже."
-        );
+                () -> scrapperClient.registerChat(chatId),
+                chatId,
+                "Не удалось зарегистрировать чат. Попробуйте позже.");
 
         log.atInfo()
                 .addKeyValue("chatId", updateData.chatId())

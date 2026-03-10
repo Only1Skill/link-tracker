@@ -1,5 +1,7 @@
 package backend.academy.linktracker.command.impl;
 
+import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
+
 import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.UpdateData;
@@ -7,8 +9,6 @@ import backend.academy.linktracker.service.CommandExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
 
 @Slf4j
 @Component("/untrack")
@@ -35,10 +35,7 @@ public class UntrackCommand implements BotCommandCreation {
         }
 
         commandExecutor.executeScrapperCallVoid(
-            () -> scrapperClient.removeLink(chatId, url),
-            chatId,
-            "Ошибка при удалении ссылки. Попробуйте позже."
-        );
+                () -> scrapperClient.removeLink(chatId, url), chatId, "Ошибка при удалении ссылки. Попробуйте позже.");
 
         return "Ссылка успешно удалена!";
     }

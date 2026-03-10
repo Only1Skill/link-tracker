@@ -16,30 +16,30 @@ public class ClientConfiguration {
     @Bean
     public GitHubClient gitHubClient() {
         RestClient restClient = RestClient.builder()
-            .baseUrl("https://api.github.com")
-            .defaultHeader("Accept", "application/vnd.github.v3+json")
-            .build();
+                .baseUrl("https://api.github.com")
+                .defaultHeader("Accept", "application/vnd.github.v3+json")
+                .build();
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
-        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
+        HttpServiceProxyFactory factory =
+                HttpServiceProxyFactory.builderFor(adapter).build();
         return factory.createClient(GitHubClient.class);
     }
 
     @Bean
     public StackOverflowClient stackOverflowClient() {
         RestClient restClient = RestClient.builder()
-            .baseUrl("https://api.stackexchange.com/2.3")
-            .defaultHeader("Accept", "application/json")
-            .build();
+                .baseUrl("https://api.stackexchange.com/2.3")
+                .defaultHeader("Accept", "application/json")
+                .build();
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
-        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
+        HttpServiceProxyFactory factory =
+                HttpServiceProxyFactory.builderFor(adapter).build();
         return factory.createClient(StackOverflowClient.class);
     }
 
     @Bean
     public RestClient restClientForBot(BotProperties botProperties) {
-        return RestClient.builder()
-            .baseUrl(botProperties.getBaseUrl())
-            .build();
+        return RestClient.builder().baseUrl(botProperties.getBaseUrl()).build();
     }
 
     @Bean

@@ -1,11 +1,11 @@
 package backend.academy.linktracker.command.impl;
 
 import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.command.CommandRegistry;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import backend.academy.linktracker.command.CommandRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

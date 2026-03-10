@@ -15,14 +15,15 @@ public class BotRestClient implements BotClient {
     @Override
     public void sendUpdate(LinkUpdate update) {
         try {
-            botRestClient.post()
-                .uri("/updates")
-                .body(update)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, res) -> {
-                    log.error("Bot returned error: {} - {}", res.getStatusCode(), res.getStatusText());
-                })
-                .toBodilessEntity();
+            botRestClient
+                    .post()
+                    .uri("/updates")
+                    .body(update)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (req, res) -> {
+                        log.error("Bot returned error: {} - {}", res.getStatusCode(), res.getStatusText());
+                    })
+                    .toBodilessEntity();
             log.info("Update sent to bot for link id: {}", update.id());
         } catch (Exception e) {
             log.error("Failed to send update to bot", e);

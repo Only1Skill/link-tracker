@@ -1,20 +1,20 @@
 package backend.academy.linktracker.command.impl;
 
+import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
+
 import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.AddLinkRequest;
-import backend.academy.linktracker.dto.UpdateData;
 import backend.academy.linktracker.dto.LinkResponse;
+import backend.academy.linktracker.dto.UpdateData;
 import backend.academy.linktracker.service.CommandExecutor;
 import backend.academy.linktracker.service.state.TrackState;
 import backend.academy.linktracker.service.state.UserStateManager;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component("/track")
 @RequiredArgsConstructor
@@ -38,7 +38,7 @@ public class TrackCommand implements BotCommandCreation {
                     userStateManager.setLink(chatId, text);
                     userStateManager.setState(chatId, TrackState.AWAITING_TAGS);
                     return "Теперь укажите теги через запятую или отправьте 'пропустить':";
-                } else{
+                } else {
                     return "Некорректная ссылка. Попробуйте еще раз";
                 }
             case AWAITING_TAGS:
@@ -48,12 +48,11 @@ public class TrackCommand implements BotCommandCreation {
                 request.setLink(link);
                 request.setTags(tags);
                 LinkResponse response = commandExecutor.executeScrapperCall(
-                    () -> scrapperClient.addLink(chatId, request),
-                    chatId,
-                    "Ошибка при добавлении ссылки. Попробуйте позже."
-                );
+                        () -> scrapperClient.addLink(chatId, request),
+                        chatId,
+                        "Ошибка при добавлении ссылки. Попробуйте позже.");
                 userStateManager.clear(chatId);
-                if (response != null){
+                if (response != null) {
                     return "Ссылка успешно добавлена!";
                 } else {
                     return null;
@@ -62,7 +61,6 @@ public class TrackCommand implements BotCommandCreation {
                 return null;
         }
     }
-
 
     @Override
     public String getCommand() {
@@ -79,8 +77,8 @@ public class TrackCommand implements BotCommandCreation {
             return List.of();
         }
         return Arrays.stream(input.split(","))
-            .map(String::trim)
-            .filter(tag -> !tag.isEmpty())
-            .collect(Collectors.toList());
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toList());
     }
 }

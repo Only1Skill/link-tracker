@@ -4,6 +4,7 @@ import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
 import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.service.LinkService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/links")
@@ -27,10 +27,7 @@ public class LinkController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public LinkResponse addLink(
-        @RequestHeader("Tg-Chat-Id") Long chatId,
-        @RequestBody @Valid AddLinkRequest request
-    ) {
+    public LinkResponse addLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
         log.info("Add link for chat {}: {}", chatId, request);
         return linkService.addLink(chatId, request);
     }
@@ -38,18 +35,13 @@ public class LinkController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<LinkResponse> getLinks(
-        @RequestHeader("Tg-Chat-Id") Long chatId,
-        @RequestParam(required = false) String tag
-    ) {
+            @RequestHeader("Tg-Chat-Id") Long chatId, @RequestParam(required = false) String tag) {
         return linkService.getLinks(chatId, tag);
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
-    public void deleteLink(
-        @RequestHeader("Tg-Chat-Id") Long chatId,
-        @RequestBody @Valid AddLinkRequest request
-    ) {
+    public void deleteLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
         linkService.removeLink(chatId, request.getLink());
     }
 }

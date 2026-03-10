@@ -11,13 +11,8 @@ public interface StackOverflowClient {
 
     @GetExchange("/questions/{ids}")
     StackOverflowResponse fetchQuestions(
-        @PathVariable
-        String ids,
-        @RequestParam("site")
-        String site,
-        @RequestParam(value = "key", required = false)
-        String key,
-        @RequestParam(value = "access_token", required = false)
-        String accessToken
-    );
+            @PathVariable String ids,
+            @RequestParam("site") String site,
+            @RequestParam(value = "key", required = false) String key,
+            @RequestParam(value = "access_token", required = false) String accessToken);
 }

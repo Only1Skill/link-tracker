@@ -8,13 +8,13 @@ import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
 import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.repository.ChatRepository;
 import backend.academy.linktracker.scrapper.repository.LinkRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -42,12 +42,12 @@ public class LinkService {
         }
 
         Link link = Link.builder()
-            .chatId(chatId)
-            .url(request.getLink())
-            .tags(request.getTags())
-            .lastCheckTime(OffsetDateTime.now())
-            .lastUpdateTime(OffsetDateTime.now())
-            .build();
+                .chatId(chatId)
+                .url(request.getLink())
+                .tags(request.getTags())
+                .lastCheckTime(OffsetDateTime.now())
+                .lastUpdateTime(OffsetDateTime.now())
+                .build();
 
         Link saved = linkRepository.save(chatId, link);
         log.info("Link added: {} for chat {}", saved.getUrl(), chatId);
@@ -71,13 +71,11 @@ public class LinkService {
         List<Link> links = linkRepository.findByChatId(chatId);
         if (tag != null && !tag.isBlank()) {
             links = links.stream()
-                .filter(link -> link.getTags() != null && link.getTags().contains(tag))
-                .toList();
+                    .filter(link -> link.getTags() != null && link.getTags().contains(tag))
+                    .toList();
         }
 
-        return links.stream()
-            .map(this::mapToResponse)
-            .collect(Collectors.toList());
+        return links.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     /**
@@ -93,8 +91,7 @@ public class LinkService {
             throw new ChatNotFoundException(chatId);
         }
 
-        Link link = linkRepository.findByChatIdAndUrl(chatId, url)
-            .orElseThrow(() -> new LinkNotFoundException(url));
+        Link link = linkRepository.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
         linkRepository.delete(chatId, url);
         log.info("Link removed: {} for chat {}", url, chatId);
@@ -102,10 +99,10 @@ public class LinkService {
 
     private LinkResponse mapToResponse(Link link) {
         return LinkResponse.builder()
-            .id(link.getId())
-            .url(URI.create(link.getUrl()))
-            .tags(link.getTags())
-            .lastUpdate(link.getLastUpdateTime())
-            .build();
+                .id(link.getId())
+                .url(URI.create(link.getUrl()))
+                .tags(link.getTags())
+                .lastUpdate(link.getLastUpdateTime())
+                .build();
     }
 }
