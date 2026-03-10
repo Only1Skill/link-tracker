@@ -1,6 +1,6 @@
 package backend.academy.linktracker.command;
 
-import backend.academy.linktracker.port.dto.UpdateData;
+import backend.academy.linktracker.dto.UpdateData;
 
 /**
  * Интерфейс стратегии для обработки команд бота.

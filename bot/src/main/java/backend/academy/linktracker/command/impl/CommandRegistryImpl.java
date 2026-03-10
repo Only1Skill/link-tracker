@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import backend.academy.linktracker.command.CommandRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class CommandRegistryImpl implements backend.academy.linktracker.command.CommandRegistry {
+public class CommandRegistryImpl implements CommandRegistry {
     private final Map<String, BotCommandCreation> commands = new HashMap<>();
 
     public CommandRegistryImpl(Collection<BotCommandCreation> commandsBeans) {

@@ -1,26 +1,29 @@
 package backend.academy.linktracker.command.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import backend.academy.linktracker.command.BotCommandCreation;
-import backend.academy.linktracker.port.dto.UpdateData;
+import backend.academy.linktracker.dto.UpdateData;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @DisplayName("HelpCommand Unit Tests")
+@ExtendWith(MockitoExtension.class)
 class HelpCommandTest {
 
+    @Mock
     private CommandRegistryImpl commandRegistry;
     private HelpCommand helpCommand;
 
     @BeforeEach
     void setUp() {
-        commandRegistry = mock(CommandRegistryImpl.class);
         helpCommand = new HelpCommand(commandRegistry);
     }
 
@@ -32,8 +35,13 @@ class HelpCommandTest {
         @DisplayName("Should return list of all commands with descriptions")
         void shouldReturnListOfAllCommandsWithDescriptions() {
             // given
-            BotCommandCreation startCommand = new StartCommand();
-            BotCommandCreation helpCommand2 = new HelpCommand(null);
+            BotCommandCreation startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+            when(startCommand.getDescription()).thenReturn("Начало работы с ботом");
+
+            BotCommandCreation helpCommand2 = mock(BotCommandCreation.class);
+            when(helpCommand2.getCommand()).thenReturn("/help");
+            when(helpCommand2.getDescription()).thenReturn("Показать список доступных команд");
 
             when(commandRegistry.getAllCommands()).thenReturn(List.of(startCommand, helpCommand2));
 
@@ -69,22 +77,9 @@ class HelpCommandTest {
         @DisplayName("Should handle commands with null descriptions")
         void shouldHandleCommandsWithNullDescriptions() {
             // given
-            BotCommandCreation commandWithNullDesc = new BotCommandCreation() {
-                @Override
-                public String execute(UpdateData updateData) {
-                    return "test";
-                }
-
-                @Override
-                public String getCommand() {
-                    return "/test";
-                }
-
-                @Override
-                public String getDescription() {
-                    return null;
-                }
-            };
+            BotCommandCreation commandWithNullDesc = mock(BotCommandCreation.class);
+            when(commandWithNullDesc.getCommand()).thenReturn("/test");
+            when(commandWithNullDesc.getDescription()).thenReturn(null);
 
             when(commandRegistry.getAllCommands()).thenReturn(List.of(commandWithNullDesc));
 
@@ -101,7 +96,11 @@ class HelpCommandTest {
         @DisplayName("Should format help text properly with newlines")
         void shouldFormatHelpTextProperlyWithNewlines() {
             // given
-            when(commandRegistry.getAllCommands()).thenReturn(List.of(new StartCommand()));
+            BotCommandCreation startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+            when(startCommand.getDescription()).thenReturn("Начало работы с ботом");
+
+            when(commandRegistry.getAllCommands()).thenReturn(List.of(startCommand));
 
             UpdateData updateData = new UpdateData(1, 12345L, "/help", 67890L, "testuser");
 

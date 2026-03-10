@@ -2,10 +2,9 @@ package backend.academy.linktracker.command;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
 import backend.academy.linktracker.command.impl.CommandRegistryImpl;
-import backend.academy.linktracker.command.impl.HelpCommand;
-import backend.academy.linktracker.command.impl.StartCommand;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +37,12 @@ class CommandRegistryImplTest {
         @DisplayName("Should register all provided commands")
         void shouldRegisterAllProvidedCommands() {
             // given
-            BotCommandCreation startCommand = new StartCommand();
-            BotCommandCreation helpCommand = new HelpCommand(null);
+            BotCommandCreation startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+
+            BotCommandCreation helpCommand = mock(BotCommandCreation.class);
+            when(helpCommand.getCommand()).thenReturn("/help");
+
             List<BotCommandCreation> commands = List.of(startCommand, helpCommand);
 
             // when
@@ -53,13 +56,14 @@ class CommandRegistryImplTest {
         @DisplayName("Should override duplicate command with same key")
         void shouldOverrideDuplicateCommandWithSameKey() {
             // given
-            BotCommandCreation startCommand1 = new StartCommand();
-            BotCommandCreation startCommand2 = new StartCommand() {
-                @Override
-                public String getDescription() {
-                    return "Modified start command";
-                }
-            };
+            BotCommandCreation startCommand1 = mock(BotCommandCreation.class);
+            when(startCommand1.getCommand()).thenReturn("/start");
+            when(startCommand1.getDescription()).thenReturn("Original");
+
+            BotCommandCreation startCommand2 = mock(BotCommandCreation.class);
+            when(startCommand2.getCommand()).thenReturn("/start");
+            when(startCommand2.getDescription()).thenReturn("Modified");
+
             List<BotCommandCreation> commands = List.of(startCommand1, startCommand2);
 
             // when
@@ -67,7 +71,7 @@ class CommandRegistryImplTest {
 
             // then
             assertThat(registry.getAllCommands()).hasSize(1);
-            assertThat(registry.getStrategy("/start").get().getDescription()).isEqualTo("Modified start command");
+            assertThat(registry.getStrategy("/start").get().getDescription()).isEqualTo("Modified");
         }
     }
 
@@ -81,8 +85,12 @@ class CommandRegistryImplTest {
 
         @BeforeEach
         void setUp() {
-            startCommand = new StartCommand();
-            helpCommand = new HelpCommand(null);
+            startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+
+            helpCommand = mock(BotCommandCreation.class);
+            when(helpCommand.getCommand()).thenReturn("/help");
+
             registry = new CommandRegistryImpl(List.of(startCommand, helpCommand));
         }
 
@@ -125,8 +133,12 @@ class CommandRegistryImplTest {
         @DisplayName("Should return all registered commands")
         void shouldReturnAllRegisteredCommands() {
             // given
-            BotCommandCreation startCommand = new StartCommand();
-            BotCommandCreation helpCommand = new HelpCommand(null);
+            BotCommandCreation startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+
+            BotCommandCreation helpCommand = mock(BotCommandCreation.class);
+            when(helpCommand.getCommand()).thenReturn("/help");
+
             CommandRegistry registry = new CommandRegistryImpl(List.of(startCommand, helpCommand));
 
             // when
@@ -153,13 +165,15 @@ class CommandRegistryImplTest {
         @DisplayName("Should return unmodifiable collection")
         void shouldReturnUnmodifiableCollection() {
             // given
-            CommandRegistry registry = new CommandRegistryImpl(List.of(new StartCommand()));
+            BotCommandCreation startCommand = mock(BotCommandCreation.class);
+            when(startCommand.getCommand()).thenReturn("/start");
+            CommandRegistry registry = new CommandRegistryImpl(List.of(startCommand));
 
             // when
             Collection<BotCommandCreation> allCommands = registry.getAllCommands();
 
             // then
-            assertThatThrownBy(() -> allCommands.add(new HelpCommand(null)))
+            assertThatThrownBy(() -> allCommands.add(mock(BotCommandCreation.class)))
                     .isInstanceOf(UnsupportedOperationException.class);
         }
     }

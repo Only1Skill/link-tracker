@@ -6,6 +6,10 @@ spring:
     name: scrapper
 
 app:
+  scheduler:
+    interval: 60000
+  bot:
+    base-url: http://localhost:8080
   stackoverflow:
     key: ${STACKOVERFLOW_KEY} # Use env variable. DO NOT KEEP TOKEN HERE
     access-token: ${STACKOVERFLOW_ACCESS_KEY} # Use env variable. DO NOT KEEP TOKEN HERE

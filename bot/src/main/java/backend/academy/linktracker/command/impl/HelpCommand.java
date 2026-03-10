@@ -1,7 +1,7 @@
 package backend.academy.linktracker.command.impl;
 
 import backend.academy.linktracker.command.BotCommandCreation;
-import backend.academy.linktracker.port.dto.UpdateData;
+import backend.academy.linktracker.dto.UpdateData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
