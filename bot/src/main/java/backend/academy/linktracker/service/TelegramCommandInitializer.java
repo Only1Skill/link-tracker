@@ -1,17 +1,17 @@
-package backend.academy.linktracker.menu;
+package backend.academy.linktracker.service;
 
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.command.CommandRegistry;
-import backend.academy.linktracker.port.TelegramClient;
+import backend.academy.linktracker.client.TelegramClient;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 @Profile("!test")
 public class TelegramCommandInitializer {

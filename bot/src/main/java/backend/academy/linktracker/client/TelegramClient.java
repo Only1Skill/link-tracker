@@ -1,6 +1,7 @@
-package backend.academy.linktracker.port;
+package backend.academy.linktracker.client;
 
 import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.service.UpdateHandler;
 import java.util.List;
 
 public interface TelegramClient {

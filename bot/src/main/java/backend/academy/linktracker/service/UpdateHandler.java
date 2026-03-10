@@ -1,6 +1,6 @@
-package backend.academy.linktracker.port;
+package backend.academy.linktracker.service;
 
-import backend.academy.linktracker.port.dto.UpdateData;
+import backend.academy.linktracker.dto.UpdateData;
 
 @FunctionalInterface
 public interface UpdateHandler {
