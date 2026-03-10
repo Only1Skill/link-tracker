@@ -21,10 +21,12 @@ public class BotRestClient implements BotClient {
                     .uri("/updates")
                     .body(update)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, (_, res) ->
-                        log.error("Бот вернул ошибку: {} - {}",
-                            res.getStatusCode(),
-                            LogSanitizer.sanitize(res.getStatusText())))
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            (_, res) -> log.error(
+                                    "Бот вернул ошибку: {} - {}",
+                                    res.getStatusCode(),
+                                    LogSanitizer.sanitize(res.getStatusText())))
                     .toBodilessEntity();
             log.info("Обновление, отправленное боту для получения идентификатора ссылки: {}", update.id());
         } catch (Exception e) {
