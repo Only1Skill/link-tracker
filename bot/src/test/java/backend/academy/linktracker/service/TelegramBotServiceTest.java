@@ -113,7 +113,6 @@ class TelegramBotServiceTest {
         UpdateData update = new UpdateData(1, 123L, "https://github.com/owner/repo", null, null);
         when(userStateManager.getState(123L)).thenReturn(TrackState.AWAITING_UNTRACK_LINK);
         BotCommandCreation untrackCommand = mock(BotCommandCreation.class);
-        when(commandRegistry.getStrategy("/track")).thenReturn(Optional.empty());
         when(commandRegistry.getStrategy("/untrack")).thenReturn(Optional.of(untrackCommand));
         when(untrackCommand.execute(update)).thenReturn("Deleted");
 
