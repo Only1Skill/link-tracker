@@ -3,7 +3,6 @@ package backend.academy.linktracker.service;
 import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.command.CommandRegistry;
-import com.pengrad.telegrambot.TelegramBot;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

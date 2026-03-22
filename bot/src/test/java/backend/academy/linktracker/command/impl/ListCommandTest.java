@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
-import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.dto.LinkResponse;
 import backend.academy.linktracker.dto.UpdateData;
 import backend.academy.linktracker.service.CommandExecutor;
