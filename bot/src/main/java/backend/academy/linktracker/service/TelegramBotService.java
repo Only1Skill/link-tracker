@@ -93,23 +93,22 @@ public class TelegramBotService implements UpdateHandler {
         String commandKey = parts[0].toLowerCase();
 
         Optional<BotCommandCreation> commandOpt = commandRegistry.getStrategy(commandKey);
-        if (commandOpt.isPresent()) {
-            BotCommandCreation command = commandOpt.get();
-            try {
-                String response = command.execute(updateData);
-                if (response != null) {
-                    telegramClient.sendMessage(chatId, response);
-                }
-            } catch (ScrapperClientException | ResourceAccessException e) {
-                String userMessage = determineUserMessage(e);
-                telegramClient.sendMessage(chatId, userMessage);
+        try {
+            BotCommandCreation command =
+                    commandOpt.orElseThrow(() -> new IllegalStateException("Введена неизвестная команда"));
+            String response = command.execute(updateData);
+            if (response != null) {
+                telegramClient.sendMessage(chatId, response);
             }
-        } else {
+        } catch (IllegalStateException e) {
             log.atInfo()
                     .addKeyValue("chatId", chatId)
                     .addKeyValue("unknownCommand", text)
                     .log("Неизвестная команда получена");
             telegramClient.sendMessage(chatId, UNKNOWN_COMMAND_RESPONSE);
+        } catch (ScrapperClientException | ResourceAccessException e) {
+            String userMessage = determineUserMessage(e);
+            telegramClient.sendMessage(chatId, userMessage);
         }
     }
 
