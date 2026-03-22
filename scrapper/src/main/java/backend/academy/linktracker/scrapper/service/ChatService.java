@@ -2,8 +2,8 @@ package backend.academy.linktracker.scrapper.service;
 
 import backend.academy.linktracker.scrapper.exception.ChatAlreadyExistsException;
 import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
-import backend.academy.linktracker.scrapper.repository.ChatRepository;
-import backend.academy.linktracker.scrapper.repository.LinkRepository;
+import backend.academy.linktracker.scrapper.repository.ChatStorage;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 @SuppressFBWarnings("CRLF_INJECTION_LOGS")
 public class ChatService {
 
-    private final ChatRepository chatRepository;
-    private final LinkRepository linkRepository;
+    private final ChatStorage chatStorage;
+    private final LinkStorage linkStorage;
 
     /**
      * Регистрирует новый чат.
@@ -25,10 +25,10 @@ public class ChatService {
      * @throws ChatAlreadyExistsException если чат уже зарегистрирован
      */
     public void register(Long chatId) {
-        if (chatRepository.exists(chatId)) {
+        if (chatStorage.exists(chatId)) {
             throw new ChatAlreadyExistsException(chatId);
         }
-        chatRepository.save(chatId);
+        chatStorage.save(chatId);
         log.info("Chat registered: {}", chatId);
     }
 
@@ -39,11 +39,11 @@ public class ChatService {
      * @throws ChatNotFoundException если чат не найден
      */
     public void delete(Long chatId) {
-        if (!chatRepository.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
-        linkRepository.deleteByChatId(chatId);
-        chatRepository.delete(chatId);
+        linkStorage.deleteByChatId(chatId);
+        chatStorage.delete(chatId);
         log.info("Chat deleted: {}", chatId);
     }
 }

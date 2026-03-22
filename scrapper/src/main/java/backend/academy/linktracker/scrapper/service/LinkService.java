@@ -6,8 +6,8 @@ import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
 import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
 import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
 import backend.academy.linktracker.scrapper.model.Link;
-import backend.academy.linktracker.scrapper.repository.ChatRepository;
-import backend.academy.linktracker.scrapper.repository.LinkRepository;
+import backend.academy.linktracker.scrapper.repository.impl.InMemoryChatStorage;
+import backend.academy.linktracker.scrapper.repository.impl.InMemoryLinkStorage;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
@@ -23,8 +23,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LinkService {
 
-    private final LinkRepository linkRepository;
-    private final ChatRepository chatRepository;
+    private final InMemoryLinkStorage inMemoryLinkStorage;
+    private final InMemoryChatStorage inMemoryChatStorage;
 
     /**
      * Добавить ссылку для указанного чата.
@@ -37,23 +37,27 @@ public class LinkService {
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public LinkResponse addLink(Long chatId, AddLinkRequest request) {
-        if (!chatRepository.exists(chatId)) {
+        if (!inMemoryChatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
-        if (linkRepository.findByChatIdAndUrl(chatId, request.getLink()).isPresent()) {
-            throw new LinkDuplicateException(request.getLink());
+        if (inMemoryLinkStorage.findByChatIdAndUrl(chatId, request.link()).isPresent()) {
+            throw new LinkDuplicateException(request.link());
         }
 
         Link link = Link.builder()
                 .chatId(chatId)
-                .url(request.getLink())
-                .tags(request.getTags())
+                .url(request.link())
+                .tags(request.tags())
                 .lastCheckTime(OffsetDateTime.now())
                 .lastUpdateTime(OffsetDateTime.now())
                 .build();
 
-        Link saved = linkRepository.save(chatId, link);
-        log.info("Link added: {} for chat {}", LogSanitizer.sanitize(LogSanitizer.sanitize(saved.getUrl())), chatId);
+        Link saved = inMemoryLinkStorage.save(chatId, link);
+
+        List<String> safeTags = saved.getTags() == null
+                ? null
+                : saved.getTags().stream().map(LogSanitizer::sanitize).collect(Collectors.toList());
+        log.info("Link added: {} for chat {}, tags={}", LogSanitizer.sanitize(saved.getUrl()), chatId, safeTags);
 
         return mapToResponse(saved);
     }
@@ -67,11 +71,11 @@ public class LinkService {
      * @throws ChatNotFoundException если чат не зарегистрирован
      */
     public List<LinkResponse> getLinks(Long chatId, String tag) {
-        if (!chatRepository.exists(chatId)) {
+        if (!inMemoryChatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        List<Link> links = linkRepository.findByChatId(chatId);
+        List<Link> links = inMemoryLinkStorage.findByChatId(chatId);
         if (tag != null && !tag.isBlank()) {
             links = links.stream()
                     .filter(link -> link.getTags() != null && link.getTags().contains(tag))
@@ -91,22 +95,18 @@ public class LinkService {
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public void removeLink(Long chatId, String url) {
-        if (!chatRepository.exists(chatId)) {
+        if (!inMemoryChatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        Link link = linkRepository.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
+        Link link =
+                inMemoryLinkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
-        linkRepository.delete(chatId, url);
-        log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(LogSanitizer.sanitize(link.getUrl())), chatId);
+        inMemoryLinkStorage.delete(chatId, url);
+        log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
     }
 
     private LinkResponse mapToResponse(Link link) {
-        return LinkResponse.builder()
-                .id(link.getId())
-                .url(URI.create(link.getUrl()))
-                .tags(link.getTags())
-                .lastUpdate(link.getLastUpdateTime())
-                .build();
+        return new LinkResponse(link.getId(), URI.create(link.getUrl()), link.getTags(), link.getLastUpdateTime());
     }
 }

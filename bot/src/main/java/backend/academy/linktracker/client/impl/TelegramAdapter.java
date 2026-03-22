@@ -11,6 +11,7 @@ import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SetMyCommands;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -33,7 +34,7 @@ public class TelegramAdapter implements TelegramClient {
                     try {
                         updates.stream()
                                 .map(this::convertToUpdateData)
-                                .filter(updateData -> updateData != null)
+                                .filter(Objects::nonNull)
                                 .forEach(handler::handle);
                     } catch (Exception e) {
                         log.atError()

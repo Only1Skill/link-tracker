@@ -4,14 +4,16 @@ import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.command.CommandRegistry;
 import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
 import backend.academy.linktracker.service.state.TrackState;
 import backend.academy.linktracker.service.state.UserStateManager;
 import jakarta.annotation.PostConstruct;
-import java.util.Arrays;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 
 @Slf4j
 @Service
@@ -27,7 +29,7 @@ public class TelegramBotService implements UpdateHandler {
 
     @PostConstruct
     public void init() {
-        if (!Arrays.asList(environment.getActiveProfiles()).contains("test")) {
+        if (!environment.matchesProfiles("test")) {
             telegramClient.startPolling(this);
             log.info("Телеграм бот запущен и слушает обновления");
         }
@@ -46,10 +48,30 @@ public class TelegramBotService implements UpdateHandler {
         if (currentState != TrackState.NONE && !text.startsWith("/")) {
             BotCommandCreation trackCommand =
                     commandRegistry.getStrategy("/track").orElse(null);
-            if (trackCommand != null) {
-                String response = trackCommand.execute(updateData);
-                if (response != null) {
-                    telegramClient.sendMessage(chatId, response);
+            BotCommandCreation untrackCommand =
+                    commandRegistry.getStrategy("/untrack").orElse(null);
+            if (currentState == TrackState.AWAITING_LINK || currentState == TrackState.AWAITING_TAGS) {
+                if (trackCommand != null) {
+                    try {
+                        String response = trackCommand.execute(updateData);
+                        if (response != null) {
+                            telegramClient.sendMessage(chatId, response);
+                        }
+                    } catch (ScrapperClientException | ResourceAccessException e) {
+                        String userMessage = determineUserMessage(e);
+                        telegramClient.sendMessage(chatId, userMessage);
+                    }
+                }
+            } else if (currentState == TrackState.AWAITING_UNTRACK_LINK) {
+                if (untrackCommand != null) {
+                    try {
+                        String response = untrackCommand.execute(updateData);
+                        if (response != null) {
+                            telegramClient.sendMessage(chatId, response);
+                        }
+                    } catch (ScrapperClientException | ResourceAccessException e) {
+                        telegramClient.sendMessage(chatId, determineUserMessage(e));
+                    }
                 }
             }
             return;
@@ -67,22 +89,37 @@ public class TelegramBotService implements UpdateHandler {
                 .addKeyValue("userId", updateData.userId())
                 .log("Обработка сообщения");
 
-        String[] parts = updateData.messageText().split("\\s+", 2);
+        String[] parts = text.split("\\s+", 2);
         String commandKey = parts[0].toLowerCase();
 
-        String response = commandRegistry
-                .getStrategy(commandKey)
-                .map(cmd -> cmd.execute(updateData))
-                .orElseGet(() -> {
-                    log.atInfo()
-                            .addKeyValue("chatId", updateData.chatId())
-                            .addKeyValue("unknownCommand", updateData.messageText())
-                            .log("Неизвестная команда получена");
-                    return UNKNOWN_COMMAND_RESPONSE;
-                });
-
-        if (response != null) {
-            telegramClient.sendMessage(updateData.chatId(), response);
+        Optional<BotCommandCreation> commandOpt = commandRegistry.getStrategy(commandKey);
+        if (commandOpt.isPresent()) {
+            BotCommandCreation command = commandOpt.get();
+            try {
+                String response = command.execute(updateData);
+                if (response != null) {
+                    telegramClient.sendMessage(chatId, response);
+                }
+            } catch (ScrapperClientException | ResourceAccessException e) {
+                String userMessage = determineUserMessage(e);
+                telegramClient.sendMessage(chatId, userMessage);
+            }
+        } else {
+            log.atInfo()
+                    .addKeyValue("chatId", chatId)
+                    .addKeyValue("unknownCommand", text)
+                    .log("Неизвестная команда получена");
+            telegramClient.sendMessage(chatId, UNKNOWN_COMMAND_RESPONSE);
         }
+    }
+
+    private String determineUserMessage(Exception e) {
+        if (e instanceof ScrapperClientException scEx) {
+            return scEx.getMessage();
+        }
+        if (e instanceof ResourceAccessException) {
+            return "Сервис временно недоступен. Попробуйте позже.";
+        }
+        return "Произошла ошибка. Попробуйте позже.";
     }
 }

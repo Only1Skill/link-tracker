@@ -5,6 +5,8 @@ import backend.academy.linktracker.scrapper.client.GitHubClient;
 import backend.academy.linktracker.scrapper.client.StackOverflowClient;
 import backend.academy.linktracker.scrapper.client.impl.BotRestClient;
 import backend.academy.linktracker.scrapper.properties.BotProperties;
+import backend.academy.linktracker.scrapper.properties.GithubProperties;
+import backend.academy.linktracker.scrapper.properties.StackoverflowProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
@@ -14,9 +16,9 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 @Configuration
 public class ClientConfiguration {
     @Bean
-    public GitHubClient gitHubClient() {
+    public GitHubClient gitHubClient(GithubProperties githubProperties) {
         RestClient restClient = RestClient.builder()
-                .baseUrl("https://api.github.com")
+                .baseUrl(githubProperties.getBaseUrl())
                 .defaultHeader("Accept", "application/vnd.github.v3+json")
                 .build();
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
@@ -26,9 +28,9 @@ public class ClientConfiguration {
     }
 
     @Bean
-    public StackOverflowClient stackOverflowClient() {
+    public StackOverflowClient stackOverflowClient(StackoverflowProperties stackoverflowProperties) {
         RestClient restClient = RestClient.builder()
-                .baseUrl("https://api.stackexchange.com/2.3")
+                .baseUrl(stackoverflowProperties.getBaseUrl())
                 .defaultHeader("Accept", "application/json")
                 .build();
         RestClientAdapter adapter = RestClientAdapter.create(restClient);

@@ -8,7 +8,7 @@ import backend.academy.linktracker.scrapper.client.dto.StackOverflowResponse;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
 import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.properties.StackoverflowProperties;
-import backend.academy.linktracker.scrapper.repository.LinkRepository;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.util.LinkParser;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import java.time.OffsetDateTime;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class LinkUpdateScheduler {
-    private final LinkRepository linkRepository;
+    private final LinkStorage linkStorage;
     private final GitHubClient gitHubClient;
     private final StackOverflowClient stackOverflowClient;
     private final BotClient botClient;
@@ -34,7 +34,7 @@ public class LinkUpdateScheduler {
     @Scheduled(fixedDelayString = "${app.scheduler.interval}")
     public void updateLinks() {
         log.info("Начинаю запланированное обновление ссылок");
-        List<Link> allLinks = linkRepository.findAll();
+        List<Link> allLinks = linkStorage.findAll();
         Map<String, List<Link>> linksByUrl = allLinks.stream().collect(Collectors.groupingBy(Link::getUrl));
 
         for (Map.Entry<String, List<Link>> entry : linksByUrl.entrySet()) {

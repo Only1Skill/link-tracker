@@ -31,14 +31,8 @@ public class ListCommand implements BotCommandCreation {
         }
         String finalTag = tag;
 
-        List<LinkResponse> links = commandExecutor.executeScrapperCall(
-                () -> scrapperClient.getLinks(chatId, finalTag),
-                chatId,
-                "Ошибка при получении списка ссылок. Попробуйте позже.");
-
-        if (links == null) {
-            return null;
-        }
+        List<LinkResponse> links =
+                commandExecutor.executeScrapperCall(() -> scrapperClient.getLinks(chatId, finalTag), chatId);
 
         if (links.isEmpty()) {
             return "У вас нет отслеживаемых ссылок" + (tag == null ? "." : " с тегом '" + tag + "'.");
@@ -49,10 +43,10 @@ public class ListCommand implements BotCommandCreation {
         String list = IntStream.range(0, links.size())
                 .mapToObj(i -> {
                     LinkResponse link = links.get(i);
-                    String tags = (link.getTags() != null && !link.getTags().isEmpty())
-                            ? " (теги: " + String.join(", ", link.getTags()) + ")"
+                    String tags = (link.tags() != null && !link.tags().isEmpty())
+                            ? " (теги: " + String.join(", ", link.tags()) + ")"
                             : "";
-                    return (i + 1) + ". " + link.getUrl() + tags;
+                    return (i + 1) + ". " + link.url() + tags;
                 })
                 .collect(Collectors.joining("\n"));
 

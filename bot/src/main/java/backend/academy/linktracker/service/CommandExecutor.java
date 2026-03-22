@@ -1,22 +1,18 @@
 package backend.academy.linktracker.service;
 
-import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.exception.ScrapperClientException;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 
-@Service
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class CommandExecutor {
-    private final TelegramClient telegramClient;
 
-    /**
-     * Выполняет действие, возвращающее результат. При ошибке отправляет сообщение и возвращает null.
-     */
-    public <T> T executeScrapperCall(Supplier<T> action, long chatId, String errorMessage) {
+    public <T> T executeScrapperCall(Supplier<T> action, long chatId) {
         try {
             return action.get();
         } catch (ScrapperClientException e) {
@@ -24,15 +20,17 @@ public class CommandExecutor {
                     .setCause(e)
                     .addKeyValue("chatId", chatId)
                     .log("Ошибка при вызове Scrapper: {}", e.getMessage());
-            telegramClient.sendMessage(chatId, errorMessage);
-            return null;
+            throw e;
+        } catch (ResourceAccessException e) {
+            log.atError()
+                    .setCause(e)
+                    .addKeyValue("chatId", chatId)
+                    .log("Сетевая ошибка при вызове Scrapper: {}", e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Для методов без возвращаемого значения (void).
-     */
-    public void executeScrapperCallVoid(Runnable action, long chatId, String errorMessage) {
+    public void executeScrapperCallVoid(Runnable action, long chatId) {
         try {
             action.run();
         } catch (ScrapperClientException e) {
@@ -40,7 +38,13 @@ public class CommandExecutor {
                     .setCause(e)
                     .addKeyValue("chatId", chatId)
                     .log("Ошибка при вызове Scrapper: {}", e.getMessage());
-            telegramClient.sendMessage(chatId, errorMessage);
+            throw e;
+        } catch (ResourceAccessException e) {
+            log.atError()
+                    .setCause(e)
+                    .addKeyValue("chatId", chatId)
+                    .log("Сетевая ошибка при вызове Scrapper: {}", e.getMessage());
+            throw e;
         }
     }
 }

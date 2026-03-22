@@ -3,6 +3,7 @@ package backend.academy.linktracker.service;
 import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.command.CommandRegistry;
+import com.pengrad.telegrambot.TelegramBot;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +22,14 @@ public class TelegramCommandInitializer {
 
     @PostConstruct
     public void initMethod() {
-        log.info("Настройка меню команд бота...");
-
-        List<BotCommandCreation> commands = commandRegistry.getAllCommands().stream()
-                .filter(cmd ->
-                        cmd.getDescription() != null && !cmd.getDescription().isEmpty())
-                .toList();
-
-        telegramClient.setCommands(commands);
+        try {
+            List<BotCommandCreation> commands = commandRegistry.getAllCommands().stream()
+                    .filter(cmd -> cmd.getDescription() != null
+                            && !cmd.getDescription().isEmpty())
+                    .toList();
+            telegramClient.setCommands(commands);
+        } catch (Exception e) {
+            log.error("Не удалось установить команды бота: {}", e.getMessage(), e);
+        }
     }
 }

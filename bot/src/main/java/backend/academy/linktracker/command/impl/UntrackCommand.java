@@ -5,7 +5,10 @@ import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
 import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
 import backend.academy.linktracker.service.CommandExecutor;
+import backend.academy.linktracker.service.state.TrackState;
+import backend.academy.linktracker.service.state.UserStateManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,28 +19,36 @@ import org.springframework.stereotype.Component;
 public class UntrackCommand implements BotCommandCreation {
 
     private final ScrapperClient scrapperClient;
+    private final UserStateManager userStateManager;
     private final CommandExecutor commandExecutor;
 
     @Override
     public String execute(UpdateData updateData) {
         Long chatId = updateData.chatId();
+        TrackState state = userStateManager.getState(chatId);
         String text = updateData.messageText();
 
-        String[] parts = text.split("\\s+", 2);
-        if (parts.length < 2 || parts[1].isBlank()) {
-            return "Пожалуйста, укажите ссылку для удаления, например: /untrack https://github.com/user/repo";
+        if (state == TrackState.NONE) {
+            userStateManager.setState(chatId, TrackState.AWAITING_UNTRACK_LINK);
+            return "Отправьте ссылку, которую хотите перестать отслеживать:";
         }
 
-        String url = parts[1].trim();
-
-        if (!isValidUrl(url)) {
-            return "Некорректная ссылка. Убедитесь, что она начинается с http:// или https://";
+        if (state == TrackState.AWAITING_UNTRACK_LINK) {
+            String url = text.trim();
+            if (!isValidUrl(url)) {
+                return "Некорректная ссылка. Попробуйте ещё раз или используйте /cancel для отмены.";
+            }
+            try {
+                commandExecutor.executeScrapperCallVoid(() -> scrapperClient.removeLink(chatId, url), chatId);
+                userStateManager.clear(chatId);
+                return "Ссылка успешно удалена из отслеживаемых!";
+            } catch (ScrapperClientException e) {
+                userStateManager.clear(chatId);
+                return e.getMessage();
+            }
         }
 
-        commandExecutor.executeScrapperCallVoid(
-                () -> scrapperClient.removeLink(chatId, url), chatId, "Ошибка при удалении ссылки. Попробуйте позже.");
-
-        return "Ссылка успешно удалена!";
+        return null;
     }
 
     @Override

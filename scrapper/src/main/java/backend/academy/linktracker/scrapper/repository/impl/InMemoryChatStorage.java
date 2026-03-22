@@ -1,11 +1,12 @@
-package backend.academy.linktracker.scrapper.repository;
+package backend.academy.linktracker.scrapper.repository.impl;
 
+import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
-@Repository
-public class ChatRepository {
+@Component
+public class InMemoryChatStorage implements ChatStorage {
     private final Set<Long> chats = ConcurrentHashMap.newKeySet();
 
     public void save(Long chatId) {

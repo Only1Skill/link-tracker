@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 
-@HttpExchange(url = "https://api.stackexchange.com/2.3")
+@HttpExchange
 public interface StackOverflowClient {
 
     @GetExchange("/questions/{ids}")

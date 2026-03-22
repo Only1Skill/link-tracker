@@ -5,8 +5,8 @@ import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
 import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.command.BotCommandCreation;
 import backend.academy.linktracker.dto.AddLinkRequest;
-import backend.academy.linktracker.dto.LinkResponse;
 import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
 import backend.academy.linktracker.service.CommandExecutor;
 import backend.academy.linktracker.service.state.TrackState;
 import backend.academy.linktracker.service.state.UserStateManager;
@@ -32,7 +32,7 @@ public class TrackCommand implements BotCommandCreation {
         switch (state) {
             case NONE:
                 userStateManager.setState(chatId, TrackState.AWAITING_LINK);
-                return "Отправьте ссылку, которую хотите отслеживать";
+                return "Отправьте ссылку, которую хотите отслеживать, либо /cancel для отмены диалога";
             case AWAITING_LINK:
                 if (isValidUrl(text)) {
                     userStateManager.setLink(chatId, text);
@@ -44,19 +44,15 @@ public class TrackCommand implements BotCommandCreation {
             case AWAITING_TAGS:
                 String link = userStateManager.getLink(chatId);
                 List<String> tags = parseTags(text);
-                AddLinkRequest request = new AddLinkRequest();
-                request.setLink(link);
-                request.setTags(tags);
-                LinkResponse response = commandExecutor.executeScrapperCall(
-                        () -> scrapperClient.addLink(chatId, request),
-                        chatId,
-                        "Ошибка при добавлении ссылки. Попробуйте позже.");
-                userStateManager.clear(chatId);
-                if (response != null) {
-                    return "Ссылка успешно добавлена!";
-                } else {
-                    return null;
+                AddLinkRequest request = new AddLinkRequest(link, tags);
+                try {
+                    commandExecutor.executeScrapperCallVoid(() -> scrapperClient.addLink(chatId, request), chatId);
+                } catch (ScrapperClientException e) {
+                    return e.getMessage();
+                } finally {
+                    userStateManager.clear(chatId);
                 }
+                return "Ссылка успешно добавлена!";
             default:
                 return null;
         }

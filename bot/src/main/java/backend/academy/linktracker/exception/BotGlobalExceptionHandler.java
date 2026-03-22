@@ -8,12 +8,12 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 @Slf4j
-@ControllerAdvice
+@RestControllerAdvice
 public class BotGlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -32,13 +32,12 @@ public class BotGlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String message, WebRequest request) {
-        ApiErrorResponse error = ApiErrorResponse.builder()
-                .timestamp(OffsetDateTime.now())
-                .status(status.value())
-                .error(status.getReasonPhrase())
-                .message(message)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
+        ApiErrorResponse error = new ApiErrorResponse(
+                OffsetDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                request.getDescription(false).replace("uri=", ""));
         return new ResponseEntity<>(error, status);
     }
 }

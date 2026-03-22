@@ -1,33 +1,15 @@
 package backend.academy.linktracker.service.state;
 
-import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Service;
+public interface UserStateManager {
+    UserState getOrCreate(Long chatId);
 
-@Service
-public class UserStateManager {
-    private final ConcurrentHashMap<Long, UserState> states = new ConcurrentHashMap<>();
+    void setState(Long chatId, TrackState state);
 
-    public UserState getOrCreate(Long chatId) {
-        return states.computeIfAbsent(chatId, k -> new UserState());
-    }
+    TrackState getState(Long chatId);
 
-    public void setState(Long chatId, TrackState state) {
-        getOrCreate(chatId).setState(state);
-    }
+    void setLink(Long chatId, String link);
 
-    public TrackState getState(Long chatId) {
-        return states.getOrDefault(chatId, new UserState()).getState();
-    }
+    String getLink(Long chatId);
 
-    public void setLink(Long chatId, String link) {
-        getOrCreate(chatId).setLink(link);
-    }
-
-    public String getLink(Long chatId) {
-        return states.getOrDefault(chatId, new UserState()).getLink();
-    }
-
-    public void clear(Long chatId) {
-        states.remove(chatId);
-    }
+    void clear(Long chatId);
 }

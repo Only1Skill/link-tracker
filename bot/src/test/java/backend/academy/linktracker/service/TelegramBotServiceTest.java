@@ -1,167 +1,136 @@
 package backend.academy.linktracker.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
-import backend.academy.linktracker.client.ScrapperClient;
 import backend.academy.linktracker.client.TelegramClient;
 import backend.academy.linktracker.command.BotCommandCreation;
-import backend.academy.linktracker.command.impl.CommandRegistryImpl;
-import backend.academy.linktracker.command.impl.HelpCommand;
-import backend.academy.linktracker.command.impl.StartCommand;
+import backend.academy.linktracker.command.CommandRegistry;
 import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
+import backend.academy.linktracker.service.state.TrackState;
 import backend.academy.linktracker.service.state.UserStateManager;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
+import org.springframework.web.client.ResourceAccessException;
 
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = TelegramBotServiceTest.TestConfig.class)
-@DisplayName("Spring-компонентные тесты TelegramBotService")
+@ExtendWith(MockitoExtension.class)
 class TelegramBotServiceTest {
 
-    @Configuration
-    @Import({TelegramBotService.class, CommandRegistryImpl.class})
-    static class TestConfig {
-
-        @Bean
-        public TelegramClient telegramClient() {
-            return Mockito.mock(TelegramClient.class);
-        }
-
-        @Bean
-        public ScrapperClient scrapperClient() {
-            return Mockito.mock(ScrapperClient.class);
-        }
-
-        @Bean
-        public CommandExecutor commandExecutor(TelegramClient telegramClient) {
-            return new CommandExecutor(telegramClient);
-        }
-
-        @Bean
-        public UserStateManager userStateManager() {
-            return new UserStateManager();
-        }
-
-        @Bean
-        public BotCommandCreation startCommand(ScrapperClient scrapperClient, CommandExecutor commandExecutor) {
-            return new StartCommand(scrapperClient, commandExecutor);
-        }
-
-        @Bean
-        public BotCommandCreation helpCommand(@Lazy CommandRegistryImpl commandRegistry) {
-            return new HelpCommand(commandRegistry);
-        }
-    }
-
-    @Autowired
-    private TelegramBotService telegramBotService;
-
-    @Autowired
+    @Mock
     private TelegramClient telegramClient;
 
-    private ArgumentCaptor<String> messageCaptor;
-    private ArgumentCaptor<Long> chatIdCaptor;
+    @Mock
+    private CommandRegistry commandRegistry;
 
-    @BeforeEach
-    void setUp() {
-        messageCaptor = ArgumentCaptor.forClass(String.class);
-        chatIdCaptor = ArgumentCaptor.forClass(Long.class);
-    }
+    @Mock
+    private UserStateManager userStateManager;
 
-    @AfterEach
-    void tearDown() {
-        reset(telegramClient);
+    @InjectMocks
+    private TelegramBotService botService;
+
+    @Test
+    void handlesUnknownCommand() {
+        UpdateData update = new UpdateData(1, 123L, "/unknown", null, null);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.NONE);
+        when(commandRegistry.getStrategy("/unknown")).thenReturn(Optional.empty());
+
+        botService.handle(update);
+
+        verify(telegramClient)
+                .sendMessage(123L, "Извините, я не понимаю эту команду. Используйте /help для списка команд.");
     }
 
     @Test
-    @DisplayName("Должен обработать /start команду")
-    void shouldHandleStartCommand() {
-        // given
-        UpdateData updateData = new UpdateData(1, 12345L, "/start", 67890L, "testuser");
+    void executesCommandAndSendsResponse() {
+        UpdateData update = new UpdateData(1, 123L, "/help", null, null);
+        BotCommandCreation command = mock(BotCommandCreation.class);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.NONE);
+        when(commandRegistry.getStrategy("/help")).thenReturn(Optional.of(command));
+        when(command.execute(update)).thenReturn("Help text");
 
-        // when
-        telegramBotService.handle(updateData);
+        botService.handle(update);
 
-        // then
-        verify(telegramClient).sendMessage(chatIdCaptor.capture(), messageCaptor.capture());
-        assertThat(chatIdCaptor.getValue()).isEqualTo(12345L);
-        assertThat(messageCaptor.getValue()).contains("Добро пожаловать").contains("/help");
+        verify(telegramClient).sendMessage(123L, "Help text");
     }
 
     @Test
-    @DisplayName("Должен обработать /help команду")
-    void shouldHandleHelpCommand() {
-        // given
-        UpdateData updateData = new UpdateData(1, 12345L, "/help", 67890L, "testuser");
+    void sendsErrorMessage_whenCommandThrowsScrapperException() {
+        UpdateData update = new UpdateData(1, 123L, "/start", null, null);
+        BotCommandCreation command = mock(BotCommandCreation.class);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.NONE);
+        when(commandRegistry.getStrategy("/start")).thenReturn(Optional.of(command));
+        when(command.execute(update)).thenThrow(new ScrapperClientException("Chat exists"));
 
-        // when
-        telegramBotService.handle(updateData);
+        botService.handle(update);
 
-        // then
-        verify(telegramClient).sendMessage(chatIdCaptor.capture(), messageCaptor.capture());
-        assertThat(chatIdCaptor.getValue()).isEqualTo(12345L);
-        assertThat(messageCaptor.getValue())
-                .contains("Доступные команды")
-                .contains("/start")
-                .contains("/help");
+        verify(telegramClient).sendMessage(123L, "Chat exists");
     }
 
     @Test
-    @DisplayName("Должен ответить на неизвестную команду")
-    void shouldHandleUnknownCommand() {
-        // given
-        UpdateData updateData = new UpdateData(1, 12345L, "/unknown", 67890L, "testuser");
+    void sendsErrorMessage_whenResourceAccessException() {
+        UpdateData update = new UpdateData(1, 123L, "/start", null, null);
+        BotCommandCreation command = mock(BotCommandCreation.class);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.NONE);
+        when(commandRegistry.getStrategy("/start")).thenReturn(Optional.of(command));
+        when(command.execute(update)).thenThrow(new ResourceAccessException("Network error"));
 
-        // when
-        telegramBotService.handle(updateData);
+        botService.handle(update);
 
-        // then
-        verify(telegramClient).sendMessage(chatIdCaptor.capture(), messageCaptor.capture());
-        assertThat(chatIdCaptor.getValue()).isEqualTo(12345L);
-        assertThat(messageCaptor.getValue())
-                .contains("Извините, я не понимаю эту команду")
-                .contains("/help");
+        verify(telegramClient).sendMessage(123L, "Сервис временно недоступен. Попробуйте позже.");
     }
 
     @Test
-    @DisplayName("Должен извлечь команду из сообщения с аргументами")
-    void shouldExtractCommandFromMessageWithArgs() {
-        // given
-        UpdateData updateData = new UpdateData(1, 12345L, "/start with arguments", 67890L, "testuser");
+    void handlesCancelCommand() {
+        UpdateData update = new UpdateData(1, 123L, "/cancel", null, null);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.AWAITING_LINK);
 
-        // when
-        telegramBotService.handle(updateData);
+        botService.handle(update);
 
-        // then
-        verify(telegramClient).sendMessage(chatIdCaptor.capture(), messageCaptor.capture());
-        assertThat(messageCaptor.getValue()).contains("Добро пожаловать");
+        verify(userStateManager).clear(123L);
+        verify(telegramClient).sendMessage(123L, "Диалог отменён.");
     }
 
     @Test
-    @DisplayName("Должен обработать команду в любом регистре")
-    void shouldHandleCaseInsensitiveCommand() {
-        // given
-        UpdateData updateData = new UpdateData(1, 12345L, "/START", 67890L, "testuser");
+    void handlesAwaitingTrackLinkState() {
+        UpdateData update = new UpdateData(1, 123L, "https://github.com/owner/repo", null, null);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.AWAITING_LINK);
+        BotCommandCreation trackCommand = mock(BotCommandCreation.class);
+        when(commandRegistry.getStrategy("/track")).thenReturn(Optional.of(trackCommand));
+        when(trackCommand.execute(update)).thenReturn("Processing");
 
-        // when
-        telegramBotService.handle(updateData);
+        botService.handle(update);
 
-        // then
-        verify(telegramClient).sendMessage(chatIdCaptor.capture(), messageCaptor.capture());
-        assertThat(messageCaptor.getValue()).contains("Добро пожаловать");
+        verify(telegramClient).sendMessage(123L, "Processing");
+    }
+
+    @Test
+    void handlesAwaitingUntrackLinkState() {
+        UpdateData update = new UpdateData(1, 123L, "https://github.com/owner/repo", null, null);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.AWAITING_UNTRACK_LINK);
+        BotCommandCreation untrackCommand = mock(BotCommandCreation.class);
+        when(commandRegistry.getStrategy("/track")).thenReturn(Optional.empty());
+        when(commandRegistry.getStrategy("/untrack")).thenReturn(Optional.of(untrackCommand));
+        when(untrackCommand.execute(update)).thenReturn("Deleted");
+
+        botService.handle(update);
+
+        verify(telegramClient).sendMessage(123L, "Deleted");
+    }
+
+    @Test
+    void doesNotCrashWhenTrackCommandNotFoundInAwaitingState() {
+        UpdateData update = new UpdateData(1, 123L, "some text", null, null);
+        when(userStateManager.getState(123L)).thenReturn(TrackState.AWAITING_LINK);
+        when(commandRegistry.getStrategy("/track")).thenReturn(Optional.empty());
+
+        botService.handle(update);
+
+        verify(telegramClient, never()).sendMessage(anyLong(), anyString());
     }
 }

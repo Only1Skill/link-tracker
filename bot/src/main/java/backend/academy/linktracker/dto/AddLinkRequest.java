@@ -1,14 +1,11 @@
 package backend.academy.linktracker.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import org.hibernate.validator.constraints.URL;
 
-@Getter
-@Setter
-@RequiredArgsConstructor
-public class AddLinkRequest {
-    private String link;
-    private List<String> tags;
-}
+public record AddLinkRequest(
+        @NotBlank(message = "Ссылка не может быть пустой") @URL(message = "Ссылка должна быть корректным URL")
+        String link,
+
+        List<String> tags) {}

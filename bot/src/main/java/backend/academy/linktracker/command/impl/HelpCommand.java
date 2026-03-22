@@ -1,6 +1,7 @@
 package backend.academy.linktracker.command.impl;
 
 import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.command.CommandRegistry;
 import backend.academy.linktracker.dto.UpdateData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component("/help")
 public class HelpCommand implements BotCommandCreation {
-    private final CommandRegistryImpl commandRegistry;
+    private final CommandRegistry commandRegistry;
 
     public HelpCommand(@Lazy CommandRegistryImpl commandRegistryImpl) {
         this.commandRegistry = commandRegistryImpl;

@@ -1,16 +1,17 @@
-package backend.academy.linktracker.scrapper.repository;
+package backend.academy.linktracker.scrapper.repository.impl;
 
 import backend.academy.linktracker.scrapper.model.Link;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
-@Repository
-public class LinkRepository {
+@Component
+public class InMemoryLinkStorage implements LinkStorage {
 
     private final Map<Long, List<Link>> storage = new ConcurrentHashMap<>();
     private long nextId = 1;

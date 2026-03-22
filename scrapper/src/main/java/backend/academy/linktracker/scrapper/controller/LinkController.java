@@ -3,11 +3,9 @@ package backend.academy.linktracker.scrapper.controller;
 import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
 import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.service.LinkService;
-import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,7 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/links")
+@RequestMapping("/links")
 @RequiredArgsConstructor
 @Slf4j
 public class LinkController {
@@ -32,10 +30,6 @@ public class LinkController {
     @ResponseStatus(HttpStatus.OK)
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public LinkResponse addLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
-        List<String> safeTags = request.getTags() == null
-                ? null
-                : request.getTags().stream().map(LogSanitizer::sanitize).collect(Collectors.toList());
-        log.info("Add link for chat {}: link={}, tags={}", chatId, LogSanitizer.sanitize(request.getLink()), safeTags);
         return linkService.addLink(chatId, request);
     }
 
@@ -49,6 +43,6 @@ public class LinkController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
     public void deleteLink(@RequestHeader("Tg-Chat-Id") Long chatId, @RequestBody @Valid AddLinkRequest request) {
-        linkService.removeLink(chatId, request.getLink());
+        linkService.removeLink(chatId, request.link());
     }
 }
