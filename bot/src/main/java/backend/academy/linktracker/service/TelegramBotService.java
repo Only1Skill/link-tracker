@@ -46,24 +46,19 @@ public class TelegramBotService implements UpdateHandler {
         TrackState currentState = userStateManager.getState(chatId);
 
         if (currentState != TrackState.NONE && !text.startsWith("/")) {
-            BotCommandCreation trackCommand =
-                    commandRegistry.getStrategy("/track").orElse(null);
-            BotCommandCreation untrackCommand =
-                    commandRegistry.getStrategy("/untrack").orElse(null);
             if (currentState == TrackState.AWAITING_LINK || currentState == TrackState.AWAITING_TAGS) {
-                if (trackCommand != null) {
+                commandRegistry.getStrategy("/track").ifPresent(trackCommand -> {
                     try {
                         String response = trackCommand.execute(updateData);
                         if (response != null) {
                             telegramClient.sendMessage(chatId, response);
                         }
                     } catch (ScrapperClientException | ResourceAccessException e) {
-                        String userMessage = determineUserMessage(e);
-                        telegramClient.sendMessage(chatId, userMessage);
+                        telegramClient.sendMessage(chatId, determineUserMessage(e));
                     }
-                }
+                });
             } else if (currentState == TrackState.AWAITING_UNTRACK_LINK) {
-                if (untrackCommand != null) {
+                commandRegistry.getStrategy("/untrack").ifPresent(untrackCommand -> {
                     try {
                         String response = untrackCommand.execute(updateData);
                         if (response != null) {
@@ -72,7 +67,7 @@ public class TelegramBotService implements UpdateHandler {
                     } catch (ScrapperClientException | ResourceAccessException e) {
                         telegramClient.sendMessage(chatId, determineUserMessage(e));
                     }
-                }
+                });
             }
             return;
         }
