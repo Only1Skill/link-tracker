@@ -28,7 +28,7 @@ public class TelegramCommandInitializer {
                     .toList();
             telegramClient.setCommands(commands);
         } catch (Exception e) {
-            log.error("Не удалось установить команды бота: {}", e.getMessage(), e);
+            log.error("Не удалось установить команды бота", e);
         }
     }
 }
