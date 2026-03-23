@@ -1,4 +1,4 @@
-package backend.academy.linktracker.scrapper.repository.impl;
+package backend.academy.linktracker.scrapper.repository.inmemory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

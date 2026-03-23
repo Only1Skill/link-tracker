@@ -6,10 +6,11 @@ import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
 import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
 import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
 import backend.academy.linktracker.scrapper.model.Link;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryChatStorage;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryLinkStorage;
+import backend.academy.linktracker.scrapper.repository.ChatStorage;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import jakarta.transaction.Transactional;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -22,9 +23,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class LinkService {
-
-    private final InMemoryLinkStorage inMemoryLinkStorage;
-    private final InMemoryChatStorage inMemoryChatStorage;
+    private final LinkStorage linkStorage;
+    private final ChatStorage chatStorage;
 
     /**
      * Добавить ссылку для указанного чата.
@@ -36,11 +36,12 @@ public class LinkService {
      * @throws LinkDuplicateException если ссылка уже отслеживается в этом чате
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
+    @Transactional
     public LinkResponse addLink(Long chatId, AddLinkRequest request) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
-        if (inMemoryLinkStorage.findByChatIdAndUrl(chatId, request.link()).isPresent()) {
+        if (linkStorage.findByChatIdAndUrl(chatId, request.link()).isPresent()) {
             throw new LinkDuplicateException(request.link());
         }
 
@@ -52,7 +53,7 @@ public class LinkService {
                 .lastUpdateTime(OffsetDateTime.now())
                 .build();
 
-        Link saved = inMemoryLinkStorage.save(chatId, link);
+        Link saved = linkStorage.save(chatId, link);
 
         List<String> safeTags = saved.getTags() == null
                 ? null
@@ -71,11 +72,11 @@ public class LinkService {
      * @throws ChatNotFoundException если чат не зарегистрирован
      */
     public List<LinkResponse> getLinks(Long chatId, String tag) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        List<Link> links = inMemoryLinkStorage.findByChatId(chatId);
+        List<Link> links = linkStorage.findByChatId(chatId);
         if (tag != null && !tag.isBlank()) {
             links = links.stream()
                     .filter(link -> link.getTags() != null && link.getTags().contains(tag))
@@ -94,15 +95,15 @@ public class LinkService {
      * @throws LinkNotFoundException если ссылка не найдена
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
+    @Transactional
     public void removeLink(Long chatId, String url) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        Link link =
-                inMemoryLinkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
+        Link link = linkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
-        inMemoryLinkStorage.delete(chatId, url);
+        linkStorage.delete(chatId, url);
         log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
     }
 

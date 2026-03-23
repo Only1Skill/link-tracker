@@ -1,4 +1,4 @@
-package backend.academy.linktracker.scrapper.repository.impl;
+package backend.academy.linktracker.scrapper.repository.inmemory;
 
 import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
@@ -8,8 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+@ConditionalOnProperty(name = "app.database.access-type", havingValue = "IN_MEMORY")
 @Component
 public class InMemoryLinkStorage implements LinkStorage {
 

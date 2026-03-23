@@ -4,6 +4,21 @@ server:
 spring:
   application:
     name: scrapper
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/scrapper}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+  liquibase:
+    change-log: classpath:db/migrations/db.changelog-master.yaml
+    enabled: true
 
 app:
   scheduler:
@@ -11,9 +26,11 @@ app:
   bot:
     base-url: http://localhost:8080
   stackoverflow:
-    key: ${STACKOVERFLOW_KEY} # Use env variable. DO NOT KEEP TOKEN HERE
-    access-token: ${STACKOVERFLOW_ACCESS_KEY} # Use env variable. DO NOT KEEP TOKEN HERE
+    key: ${STACKOVERFLOW_KEY}
+    access-token: ${STACKOVERFLOW_ACCESS_KEY}
     base-url: https://api.stackexchange.com/2.3
   github:
     base-url: https://api.github.com
-    token: ${GITHUB_TOKEN} # Use env variable. DO NOT KEEP TOKEN HERE
+    token: ${GITHUB_TOKEN}
+  database:
+    access-type: ${ACCESS_TYPE:SQL}
