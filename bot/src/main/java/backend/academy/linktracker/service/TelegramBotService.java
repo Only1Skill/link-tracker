@@ -1,67 +1,119 @@
 package backend.academy.linktracker.service;
 
-import backend.academy.linktracker.handler.UserCommandHandler;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.request.SendMessage;
+import backend.academy.linktracker.client.TelegramClient;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.command.CommandRegistry;
+import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
+import backend.academy.linktracker.service.state.TrackState;
+import backend.academy.linktracker.service.state.UserStateManager;
 import jakarta.annotation.PostConstruct;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TelegramBotService {
-    private final TelegramBot telegramBot;
-    private final UserCommandHandler userCommandHandler;
+public class TelegramBotService implements UpdateHandler {
+    private final TelegramClient telegramClient;
+    private final CommandRegistry commandRegistry;
+    private final UserStateManager userStateManager;
+    private final Environment environment;
 
-    Logger logger = LoggerFactory.getLogger(TelegramBotService.class);
+    private static final String UNKNOWN_COMMAND_RESPONSE =
+            "Извините, я не понимаю эту команду. Используйте /help для списка команд.";
 
     @PostConstruct
     public void init() {
-        telegramBot.setUpdatesListener(updates -> {
-            try {
-                updates.forEach(this::processUpdate);
-            } catch (Exception e) {
-                log.error("On TELEGRAM Updates error {}", e.toString());
-            }
-            return UpdatesListener.CONFIRMED_UPDATES_ALL;
-        }, e -> {
-            if (e.response() != null) {
-                log.warn("TELEGRAM ERR: {} - {}", e.response().errorCode(), e.response().description());
-            } else {
-                e.printStackTrace();
-            }
-        });
-        logger.info("Телеграм бот запущен и слушает обновления");
+        if (!environment.matchesProfiles("test")) {
+            telegramClient.startPolling(this);
+            log.info("Телеграм бот запущен и слушает обновления");
+        }
     }
 
-    void processUpdate(Update update) {
-        if (update.message() == null || update.message().text() == null) {
+    public void handle(UpdateData updateData) {
+        if (updateData.messageText() == null || updateData.messageText().isEmpty()) {
             return;
         }
 
-        long chatId = update.message().chat().id();
-        String messageText = update.message().text();
+        Long chatId = updateData.chatId();
+        String text = updateData.messageText();
 
-        log.info("Received message: chatId{}, text={}, length={}", chatId, messageText, messageText.length());
+        TrackState currentState = userStateManager.getState(chatId);
 
-        String response;
-        if ("/start".equals(messageText)) {
-            response = userCommandHandler.handleStart();
-        } else if ("/help".equals(messageText)) {
-            response = userCommandHandler.handleHelp();
-        } else {
-            response = userCommandHandler.handleUnknown();
+        if (currentState != TrackState.NONE && !text.startsWith("/")) {
+            if (currentState == TrackState.AWAITING_LINK || currentState == TrackState.AWAITING_TAGS) {
+                commandRegistry.getStrategy("/track").ifPresent(trackCommand -> {
+                    try {
+                        String response = trackCommand.execute(updateData);
+                        if (response != null) {
+                            telegramClient.sendMessage(chatId, response);
+                        }
+                    } catch (ScrapperClientException | ResourceAccessException e) {
+                        telegramClient.sendMessage(chatId, determineUserMessage(e));
+                    }
+                });
+            } else if (currentState == TrackState.AWAITING_UNTRACK_LINK) {
+                commandRegistry.getStrategy("/untrack").ifPresent(untrackCommand -> {
+                    try {
+                        String response = untrackCommand.execute(updateData);
+                        if (response != null) {
+                            telegramClient.sendMessage(chatId, response);
+                        }
+                    } catch (ScrapperClientException | ResourceAccessException e) {
+                        telegramClient.sendMessage(chatId, determineUserMessage(e));
+                    }
+                });
+            }
+            return;
         }
-        sendMessage(chatId, response);
+
+        if (text.equals("/cancel")) {
+            userStateManager.clear(chatId);
+            telegramClient.sendMessage(chatId, "Диалог отменён.");
+            return;
+        }
+
+        log.atInfo()
+                .addKeyValue("chatId", updateData.chatId())
+                .addKeyValue("text", updateData.messageText())
+                .addKeyValue("userId", updateData.userId())
+                .log("Обработка сообщения");
+
+        String[] parts = text.split("\\s+", 2);
+        String commandKey = parts[0].toLowerCase();
+
+        Optional<BotCommandCreation> commandOpt = commandRegistry.getStrategy(commandKey);
+        try {
+            BotCommandCreation command =
+                    commandOpt.orElseThrow(() -> new IllegalStateException("Введена неизвестная команда"));
+            String response = command.execute(updateData);
+            if (response != null) {
+                telegramClient.sendMessage(chatId, response);
+            }
+        } catch (IllegalStateException e) {
+            log.atInfo()
+                    .addKeyValue("chatId", chatId)
+                    .addKeyValue("unknownCommand", text)
+                    .log("Неизвестная команда получена");
+            telegramClient.sendMessage(chatId, UNKNOWN_COMMAND_RESPONSE);
+        } catch (ScrapperClientException | ResourceAccessException e) {
+            String userMessage = determineUserMessage(e);
+            telegramClient.sendMessage(chatId, userMessage);
+        }
     }
 
-    private void sendMessage(long chatId, String message) {
-        telegramBot.execute(new SendMessage(chatId, message));
+    private String determineUserMessage(Exception e) {
+        if (e instanceof ScrapperClientException scEx) {
+            return scEx.getMessage();
+        }
+        if (e instanceof ResourceAccessException) {
+            return "Сервис временно недоступен. Попробуйте позже.";
+        }
+        return "Произошла ошибка. Попробуйте позже.";
     }
 }

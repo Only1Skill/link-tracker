@@ -1,0 +1,80 @@
+package backend.academy.linktracker.command.impl;
+
+import static backend.academy.linktracker.command.UrlValidator.isValidUrl;
+
+import backend.academy.linktracker.client.ScrapperClient;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.dto.AddLinkRequest;
+import backend.academy.linktracker.dto.UpdateData;
+import backend.academy.linktracker.exception.ScrapperClientException;
+import backend.academy.linktracker.service.CommandExecutor;
+import backend.academy.linktracker.service.state.TrackState;
+import backend.academy.linktracker.service.state.UserStateManager;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+@Component("/track")
+@RequiredArgsConstructor
+public class TrackCommand implements BotCommandCreation {
+    private final CommandExecutor commandExecutor;
+    private final UserStateManager userStateManager;
+    private final ScrapperClient scrapperClient;
+
+    @Override
+    public String execute(UpdateData updateData) {
+        Long chatId = updateData.chatId();
+        TrackState state = userStateManager.getState(chatId);
+        String text = updateData.messageText();
+
+        switch (state) {
+            case NONE:
+                userStateManager.setState(chatId, TrackState.AWAITING_LINK);
+                return "Отправьте ссылку, которую хотите отслеживать, либо /cancel для отмены диалога";
+            case AWAITING_LINK:
+                if (isValidUrl(text)) {
+                    userStateManager.setLink(chatId, text);
+                    userStateManager.setState(chatId, TrackState.AWAITING_TAGS);
+                    return "Теперь укажите теги через запятую или отправьте 'пропустить':";
+                } else {
+                    return "Некорректная ссылка. Попробуйте еще раз";
+                }
+            case AWAITING_TAGS:
+                String link = userStateManager.getLink(chatId);
+                List<String> tags = parseTags(text);
+                AddLinkRequest request = new AddLinkRequest(link, tags);
+                try {
+                    commandExecutor.executeScrapperCallVoid(() -> scrapperClient.addLink(chatId, request), chatId);
+                } catch (ScrapperClientException e) {
+                    return e.getMessage();
+                } finally {
+                    userStateManager.clear(chatId);
+                }
+                return "Ссылка успешно добавлена!";
+            default:
+                return null;
+        }
+    }
+
+    @Override
+    public String getCommand() {
+        return "/track";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Начать отслеживание ссылки";
+    }
+
+    private List<String> parseTags(String input) {
+        if (input == null || input.isBlank() || input.equalsIgnoreCase("пропустить")) {
+            return List.of();
+        }
+        return Arrays.stream(input.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toList());
+    }
+}
