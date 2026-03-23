@@ -1,27 +1,18 @@
 package backend.academy.linktracker.scrapper.properties;
 
 import jakarta.validation.constraints.NotEmpty;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-@ConfigurationProperties(prefix = "app.stackoverflow")
+@ConfigurationProperties(prefix = "app.bot")
 @Validated
 @Getter
 @Setter
-@EqualsAndHashCode
-@NoArgsConstructor
-public class StackoverflowProperties {
-
+public class BotProperties {
     @NotEmpty
-    private String key;
-
-    @NotEmpty
-    private String accessToken;
-
-    @NotEmpty
+    @URL
     private String baseUrl;
 }
