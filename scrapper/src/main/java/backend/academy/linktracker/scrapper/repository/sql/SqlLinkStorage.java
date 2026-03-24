@@ -2,6 +2,7 @@ package backend.academy.linktracker.scrapper.repository.sql;
 
 import backend.academy.linktracker.scrapper.model.Link;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -9,7 +10,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.database.access-type", havingValue = "SQL")
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 public class SqlLinkStorage implements LinkStorage {
 
     private final JdbcTemplate jdbcTemplate;
@@ -34,7 +35,6 @@ public class SqlLinkStorage implements LinkStorage {
             .lastUpdateTime(rs.getTimestamp("last_update_time").toInstant().atOffset(ZoneOffset.UTC))
             .build();
 
-    @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
     @Override
     public Link save(long chatId, Link link) {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());
