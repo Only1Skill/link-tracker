@@ -38,7 +38,8 @@ public class SqlLinkStorage implements LinkStorage {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());
         Long linkId;
         if (existingLinkId.isPresent()) {
-            linkId = existingLinkId.get();
+            linkId = existingLinkId.orElseThrow(
+                    () -> new IllegalStateException("Идентификатор ссылки должен существовать"));
         } else {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(
@@ -123,12 +124,12 @@ public class SqlLinkStorage implements LinkStorage {
         if (linkId.isEmpty()) {
             return;
         }
-        jdbcTemplate.update("DELETE FROM link_chat WHERE chat_id = ? AND link_id = ?", chatId, linkId.get());
+        jdbcTemplate.update("DELETE FROM link_chat WHERE chat_id = ? AND link_id = ?", chatId, linkId.orElseThrow());
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM link_chat WHERE link_id = ?", Integer.class, linkId.get());
+                "SELECT COUNT(*) FROM link_chat WHERE link_id = ?", Integer.class, linkId.orElseThrow());
         if (count == 0) {
-            jdbcTemplate.update("DELETE FROM link_tags WHERE link_id = ?", linkId.get());
-            jdbcTemplate.update("DELETE FROM links WHERE id = ?", linkId.get());
+            jdbcTemplate.update("DELETE FROM link_tags WHERE link_id = ?", linkId.orElseThrow());
+            jdbcTemplate.update("DELETE FROM links WHERE id = ?", linkId.orElseThrow());
         }
     }
 
