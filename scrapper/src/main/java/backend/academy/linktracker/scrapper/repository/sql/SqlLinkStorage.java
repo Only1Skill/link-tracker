@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,6 +34,7 @@ public class SqlLinkStorage implements LinkStorage {
             .lastUpdateTime(rs.getTimestamp("last_update_time").toInstant().atOffset(ZoneOffset.UTC))
             .build();
 
+    @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
     @Override
     public Link save(long chatId, Link link) {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());

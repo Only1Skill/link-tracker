@@ -4,6 +4,7 @@ import backend.academy.linktracker.scrapper.repository.TagStorage;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.Objects;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,6 +19,7 @@ public class SqlTagStorage implements TagStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
+    @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
     @Override
     public Long findOrCreate(String name) {
         var ids = jdbcTemplate.queryForList("SELECT id FROM tags WHERE name = ?", Long.class, name);
