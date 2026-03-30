@@ -1,0 +1,34 @@
+package backend.academy.linktracker.service;
+
+import backend.academy.linktracker.client.TelegramClient;
+import backend.academy.linktracker.command.BotCommandCreation;
+import backend.academy.linktracker.command.CommandRegistry;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Profile("!test")
+public class TelegramCommandInitializer {
+
+    private final TelegramClient telegramClient;
+    private final CommandRegistry commandRegistry;
+
+    @PostConstruct
+    public void initMethod() {
+        try {
+            List<BotCommandCreation> commands = commandRegistry.getAllCommands().stream()
+                    .filter(cmd -> cmd.getDescription() != null
+                            && !cmd.getDescription().isEmpty())
+                    .toList();
+            telegramClient.setCommands(commands);
+        } catch (Exception e) {
+            log.error("Не удалось установить команды бота", e);
+        }
+    }
+}
