@@ -1,23 +1,23 @@
-//package backend.academy.linktracker.scrapper.service;
+// package backend.academy.linktracker.scrapper.service;
 //
-//import static org.assertj.core.api.Assertions.assertThat;
-//import static org.assertj.core.api.Assertions.assertThatThrownBy;
+// import static org.assertj.core.api.Assertions.assertThat;
+// import static org.assertj.core.api.Assertions.assertThatThrownBy;
 //
-//import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
-//import backend.academy.linktracker.scrapper.dto.LinkResponse;
-//import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
-//import backend.academy.linktracker.scrapper.test.IntegrationTestBase;
-//import java.util.List;
-//import java.util.concurrent.atomic.AtomicLong;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.test.context.ActiveProfiles;
-//import org.springframework.test.context.TestPropertySource;
+// import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
+// import backend.academy.linktracker.scrapper.dto.LinkResponse;
+// import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
+// import backend.academy.linktracker.scrapper.test.IntegrationTestBase;
+// import java.util.List;
+// import java.util.concurrent.atomic.AtomicLong;
+// import org.junit.jupiter.api.BeforeEach;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.test.context.ActiveProfiles;
+// import org.springframework.test.context.TestPropertySource;
 //
-//@ActiveProfiles("test")
-//@TestPropertySource(properties = "app.database.access-type=SQL")
-//class LinkServiceSqlIntegrationTest extends IntegrationTestBase {
+// @ActiveProfiles("test")
+// @TestPropertySource(properties = "app.database.access-type=SQL")
+// class LinkServiceSqlIntegrationTest extends IntegrationTestBase {
 //
 //    @Autowired
 //    private LinkService linkService;
@@ -60,4 +60,4 @@
 //        linkService.addLink(chatId, request);
 //        assertThatThrownBy(() -> linkService.addLink(chatId, request)).isInstanceOf(LinkDuplicateException.class);
 //    }
-//}
+// }
