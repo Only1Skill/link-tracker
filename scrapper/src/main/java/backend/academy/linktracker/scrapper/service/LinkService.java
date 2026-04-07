@@ -10,7 +10,6 @@ import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import jakarta.transaction.Transactional;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -18,10 +17,12 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class LinkService {
     private final LinkStorage linkStorage;
     private final ChatStorage chatStorage;
@@ -36,7 +37,6 @@ public class LinkService {
      * @throws LinkDuplicateException если ссылка уже отслеживается в этом чате
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
-    @Transactional
     public LinkResponse addLink(Long chatId, AddLinkRequest request) {
         if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
@@ -71,18 +71,13 @@ public class LinkService {
      * @return список LinkResponse
      * @throws ChatNotFoundException если чат не зарегистрирован
      */
+    @Transactional(readOnly = true)
     public List<LinkResponse> getLinks(Long chatId, String tag) {
         if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        List<Link> links = linkStorage.findByChatId(chatId);
-        if (tag != null && !tag.isBlank()) {
-            links = links.stream()
-                    .filter(link -> link.getTags() != null && link.getTags().contains(tag))
-                    .toList();
-        }
-
+        List<Link> links = linkStorage.findByChatId(chatId, tag);
         return links.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 

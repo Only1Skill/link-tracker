@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -16,10 +17,10 @@ import org.springframework.stereotype.Component;
 public class InMemoryLinkStorage implements LinkStorage {
 
     private final Map<Long, List<Link>> storage = new ConcurrentHashMap<>();
-    private long nextId = 1;
+    private final AtomicLong nextId = new AtomicLong(1);
 
     public Link save(long chatId, Link link) {
-        link.setId(nextId++);
+        link.setId(nextId.getAndIncrement());
         storage.computeIfAbsent(chatId, k -> new ArrayList<>()).add(link);
         return link;
     }

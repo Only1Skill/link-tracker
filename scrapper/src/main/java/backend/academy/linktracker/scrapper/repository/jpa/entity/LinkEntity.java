@@ -22,10 +22,10 @@ public class LinkEntity {
     @Column(nullable = false, unique = true)
     private String url;
 
-    @Column(name = "last_check_time", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT NOW()")
+    @Column(name = "last_check_time", nullable = false)
     private OffsetDateTime lastCheckTime;
 
-    @Column(name = "last_update_time", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT NOW()")
+    @Column(name = "last_update_time", nullable = false)
     private OffsetDateTime lastUpdateTime;
 
     @ManyToMany
@@ -43,4 +43,20 @@ public class LinkEntity {
             joinColumns = @JoinColumn(name = "link_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<TagEntity> tags = new HashSet<>();
+
+    @PrePersist
+    protected void onCreate() {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (lastCheckTime == null) {
+            lastCheckTime = now;
+        }
+        if (lastUpdateTime == null) {
+            lastUpdateTime = now;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        lastCheckTime = OffsetDateTime.now();
+    }
 }
