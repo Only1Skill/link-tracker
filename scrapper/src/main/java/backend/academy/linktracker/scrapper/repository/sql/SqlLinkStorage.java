@@ -47,7 +47,7 @@ public class SqlLinkStorage implements LinkStorage {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());
         Long linkId;
         if (existingLinkId.isPresent()) {
-            linkId = existingLinkId.get();
+            linkId = existingLinkId.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));;
         } else {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(
@@ -189,7 +189,7 @@ public class SqlLinkStorage implements LinkStorage {
         if (linkIdOpt.isEmpty()) {
             return;
         }
-        Long linkId = linkIdOpt.get();
+        Long linkId = linkIdOpt.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));
         String sql = """
             WITH deleted_chat AS (
                 DELETE FROM link_chat WHERE chat_id = ? AND link_id = ? RETURNING link_id
