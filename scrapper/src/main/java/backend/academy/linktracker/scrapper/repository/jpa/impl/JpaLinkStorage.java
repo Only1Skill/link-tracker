@@ -69,7 +69,7 @@ public class JpaLinkStorage implements LinkStorage {
         if (chatOpt.isEmpty()) {
             return Collections.emptyList();
         }
-        ChatEntity chat = chatOpt.orElseThrow(() -> new IllegalStateException("id чата не найдено"));;
+        ChatEntity chat = chatOpt.orElseThrow(() -> new IllegalStateException("id чата не найдено"));
         return chat.getLinks().stream().map(entity -> toLink(entity, chatId)).collect(Collectors.toList());
     }
 

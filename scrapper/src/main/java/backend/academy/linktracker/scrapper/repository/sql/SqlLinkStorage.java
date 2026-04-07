@@ -47,7 +47,7 @@ public class SqlLinkStorage implements LinkStorage {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());
         Long linkId;
         if (existingLinkId.isPresent()) {
-            linkId = existingLinkId.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));;
+            linkId = existingLinkId.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));
         } else {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(
