@@ -104,7 +104,8 @@ public class JpaLinkStorage implements LinkStorage {
             return;
         }
 
-        SubscriptionEntity subscription = subscriptionOpt.get();
+        SubscriptionEntity subscription =
+                subscriptionOpt.orElseThrow(() -> new IllegalArgumentException("Подписка не найдена"));
         Long linkId = subscription.getLink().getId();
 
         subscriptionRepository.delete(subscription);

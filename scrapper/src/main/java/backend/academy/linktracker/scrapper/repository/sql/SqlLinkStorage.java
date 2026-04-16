@@ -45,7 +45,7 @@ public class SqlLinkStorage implements LinkStorage {
         Long linkId;
 
         if (existingLinkId.isPresent()) {
-            linkId = existingLinkId.get();
+            linkId = existingLinkId.orElseThrow(() -> new IllegalArgumentException("linkId не найдена"));
         } else {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(
@@ -160,7 +160,7 @@ public class SqlLinkStorage implements LinkStorage {
             return;
         }
 
-        Long linkId = linkIdOpt.get();
+        Long linkId = linkIdOpt.orElseThrow(() -> new IllegalArgumentException("linkId не найдена"));
 
         jdbcTemplate.update("DELETE FROM link_chat_tag WHERE chat_id = ? AND link_id = ?", chatId, linkId);
 
