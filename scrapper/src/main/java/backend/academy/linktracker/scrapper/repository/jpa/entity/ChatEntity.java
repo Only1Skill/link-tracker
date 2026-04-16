@@ -1,11 +1,20 @@
 package backend.academy.linktracker.scrapper.repository.jpa.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.Set;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "chats")
@@ -19,21 +28,17 @@ public class ChatEntity {
     @Id
     private Long id;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
-    @ManyToMany(mappedBy = "chats")
+    @OneToMany(mappedBy = "chat")
     @Builder.Default
-    private Set<LinkEntity> links = new HashSet<>();
+    private Set<SubscriptionEntity> subscriptions = new HashSet<>();
 
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
-            createdAt = OffsetDateTime.now();
-        }
-        if (links == null) {
-            links = new HashSet<>();
+            createdAt = OffsetDateTime.now(ZoneOffset.UTC);
         }
     }
 }

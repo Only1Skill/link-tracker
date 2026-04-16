@@ -1,4 +1,6 @@
 spring:
+  jackson:
+    time-zone: UTC
   jpa:
     hibernate:
       ddl-auto: validate

@@ -17,7 +17,6 @@ import org.springframework.stereotype.Repository;
 @ConditionalOnProperty(name = "app.database.access-type", havingValue = "SQL")
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 public class SqlTagStorage implements TagStorage {
-
     private final JdbcTemplate jdbcTemplate;
 
     @Override

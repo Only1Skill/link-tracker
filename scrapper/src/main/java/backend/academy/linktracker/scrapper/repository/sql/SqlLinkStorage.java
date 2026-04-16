@@ -1,18 +1,15 @@
 package backend.academy.linktracker.scrapper.repository.sql;
 
-import backend.academy.linktracker.scrapper.model.Link;
+import backend.academy.linktracker.scrapper.model.SubscriptionLinkView;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.ZoneOffset;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -33,21 +30,22 @@ public class SqlLinkStorage implements LinkStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<Link> linkRowMapper = (rs, rowNum) -> Link.builder()
+    private final RowMapper<SubscriptionLinkView> linkRowMapper = (rs, rowNum) -> SubscriptionLinkView.builder()
             .id(rs.getLong("id"))
             .chatId(rs.getLong("chat_id"))
             .url(rs.getString("url"))
             .tags(null)
-            .lastCheckTime(rs.getTimestamp("last_check_time").toInstant().atOffset(ZoneOffset.UTC))
-            .lastUpdateTime(rs.getTimestamp("last_update_time").toInstant().atOffset(ZoneOffset.UTC))
+            .lastCheckTime(rs.getObject("last_check_time", OffsetDateTime.class))
+            .lastUpdateTime(rs.getObject("last_update_time", OffsetDateTime.class))
             .build();
 
     @Override
-    public Link save(long chatId, Link link) {
+    public SubscriptionLinkView save(long chatId, SubscriptionLinkView link) {
         Optional<Long> existingLinkId = findLinkIdByUrl(link.getUrl());
         Long linkId;
+
         if (existingLinkId.isPresent()) {
-            linkId = existingLinkId.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));
+            linkId = existingLinkId.get();
         } else {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(
@@ -70,26 +68,29 @@ public class SqlLinkStorage implements LinkStorage {
         jdbcTemplate.update(
                 "INSERT INTO link_chat (link_id, chat_id) VALUES (?, ?) ON CONFLICT DO NOTHING", linkId, chatId);
 
-        if (link.getTags() != null && !link.getTags().isEmpty()) {
+        List<String> normalizedTags = normalizeTags(link.getTags());
+        if (!normalizedTags.isEmpty()) {
             List<Long> tagIds = new ArrayList<>();
-            for (String tagName : link.getTags()) {
-                Long tagId = findOrCreateTag(tagName);
-                tagIds.add(tagId);
+            for (String tagName : normalizedTags) {
+                tagIds.add(findOrCreateTag(tagName));
             }
+
             jdbcTemplate.batchUpdate(
-                    "INSERT INTO link_tags (link_id, tag_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+                    "INSERT INTO link_chat_tag (chat_id, link_id, tag_id) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
                     tagIds,
                     tagIds.size(),
                     (ps, tagId) -> {
-                        ps.setLong(1, linkId);
-                        ps.setLong(2, tagId);
+                        ps.setLong(1, chatId);
+                        ps.setLong(2, linkId);
+                        ps.setLong(3, tagId);
                     });
         }
-        return Link.builder()
+
+        return SubscriptionLinkView.builder()
                 .id(linkId)
                 .chatId(chatId)
                 .url(link.getUrl())
-                .tags(link.getTags())
+                .tags(normalizedTags)
                 .lastCheckTime(link.getLastCheckTime())
                 .lastUpdateTime(link.getLastUpdateTime())
                 .build();
@@ -97,89 +98,58 @@ public class SqlLinkStorage implements LinkStorage {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Link> findByChatId(long chatId) {
-        List<Link> links = jdbcTemplate.query(
-                "SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id "
-                        + "FROM links l JOIN link_chat lc ON l.id = lc.link_id "
-                        + "WHERE lc.chat_id = ?",
-                linkRowMapper,
-                chatId);
-        for (Link link : links) {
-            List<String> tags = jdbcTemplate.queryForList(
-                    "SELECT t.name FROM tags t JOIN link_tags lt ON t.id = lt.tag_id WHERE lt.link_id = ?",
-                    String.class,
-                    link.getId());
-            link.setTags(tags);
-        }
-        return links;
-    }
+    public List<SubscriptionLinkView> findByChatId(long chatId) {
+        List<SubscriptionLinkView> links = jdbcTemplate.query("""
+            SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
+            FROM links l
+            JOIN link_chat lc ON l.id = lc.link_id
+            WHERE lc.chat_id = ?
+            ORDER BY l.id
+            """, linkRowMapper, chatId);
 
-    @Override
-    @SuppressFBWarnings("SQL_INJECTION_SPRING_JDBC")
-    public List<Link> findByChatId(long chatId, String tag) {
-        String linksSql;
-        Object[] params;
-        if (tag == null || tag.isBlank()) {
-            linksSql = """
-                SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
-                FROM links l
-                JOIN link_chat lc ON l.id = lc.link_id
-                WHERE lc.chat_id = ?
-                """;
-            params = new Object[] {chatId};
-        } else {
-            linksSql = """
-                SELECT DISTINCT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
-                FROM links l
-                JOIN link_chat lc ON l.id = lc.link_id
-                JOIN link_tags lt ON l.id = lt.link_id
-                JOIN tags t ON lt.tag_id = t.id
-                WHERE lc.chat_id = ? AND t.name = ?
-                """;
-            params = new Object[] {chatId, tag};
-        }
-        List<Link> links = jdbcTemplate.query(linksSql, linkRowMapper, params);
-        if (links.isEmpty()) {
-            return links;
-        }
-        String tagSql = """
-            SELECT lt.link_id, t.name
-            FROM link_tags lt
-            JOIN tags t ON lt.tag_id = t.id
-            WHERE lt.link_id IN (
-            """ + String.join(",", Collections.nCopies(links.size(), "?")) + ")";
-        List<Long> linkIds = links.stream().map(Link::getId).toList();
-        Map<Long, List<String>> tagsByLinkId = new HashMap<>();
-        jdbcTemplate.query(tagSql, linkIds.toArray(), rs -> {
-            tagsByLinkId
-                    .computeIfAbsent(rs.getLong("link_id"), k -> new ArrayList<>())
-                    .add(rs.getString("name"));
-        });
-        for (Link link : links) {
-            link.setTags(tagsByLinkId.getOrDefault(link.getId(), List.of()));
-        }
+        fillTags(links);
         return links;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Link> findByChatIdAndUrl(long chatId, String url) {
-        List<Link> links = jdbcTemplate.query(
-                "SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id "
-                        + "FROM links l JOIN link_chat lc ON l.id = lc.link_id "
-                        + "WHERE lc.chat_id = ? AND l.url = ?",
-                linkRowMapper,
-                chatId,
-                url);
+    public List<SubscriptionLinkView> findByChatId(long chatId, String tag) {
+        if (tag == null || tag.isBlank()) {
+            return findByChatId(chatId);
+        }
+
+        List<SubscriptionLinkView> links = jdbcTemplate.query("""
+            SELECT DISTINCT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
+            FROM links l
+            JOIN link_chat lc ON l.id = lc.link_id
+            JOIN link_chat_tag lct
+                ON lct.chat_id = lc.chat_id
+               AND lct.link_id = lc.link_id
+            JOIN tags t ON t.id = lct.tag_id
+            WHERE lc.chat_id = ? AND t.name = ?
+            ORDER BY l.id
+            """, linkRowMapper, chatId, tag);
+
+        fillTags(links);
+        return links;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SubscriptionLinkView> findByChatIdAndUrl(long chatId, String url) {
+        List<SubscriptionLinkView> links = jdbcTemplate.query("""
+            SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
+            FROM links l
+            JOIN link_chat lc ON l.id = lc.link_id
+            WHERE lc.chat_id = ? AND l.url = ?
+            """, linkRowMapper, chatId, url);
+
         if (links.isEmpty()) {
             return Optional.empty();
         }
-        Link link = links.getFirst();
-        List<String> tags = jdbcTemplate.queryForList(
-                "SELECT t.name FROM tags t JOIN link_tags lt ON t.id = lt.tag_id WHERE lt.link_id = ?",
-                String.class,
-                link.getId());
-        link.setTags(tags);
+
+        SubscriptionLinkView link = links.getFirst();
+        link.setTags(findTagsBySubscription(chatId, link.getId()));
         return Optional.of(link);
     }
 
@@ -189,36 +159,34 @@ public class SqlLinkStorage implements LinkStorage {
         if (linkIdOpt.isEmpty()) {
             return;
         }
-        Long linkId = linkIdOpt.orElseThrow(() -> new IllegalStateException("Id ссылки не найдено"));
-        String sql = """
-            WITH deleted_chat AS (
-                DELETE FROM link_chat WHERE chat_id = ? AND link_id = ? RETURNING link_id
-            ),
-            no_other_chats AS (
-                SELECT NOT EXISTS (SELECT 1 FROM link_chat WHERE link_id = (SELECT link_id FROM deleted_chat)) AS is_last
-            ),
-            deleted_link AS (
-                DELETE FROM links
-                WHERE id = (SELECT link_id FROM deleted_chat)
-                AND (SELECT is_last FROM no_other_chats) = true
-                RETURNING id
-            )
-            DELETE FROM link_tags
-            WHERE link_id = (SELECT id FROM deleted_link)
-            """;
-        jdbcTemplate.update(sql, chatId, linkId);
+
+        Long linkId = linkIdOpt.get();
+
+        jdbcTemplate.update("DELETE FROM link_chat_tag WHERE chat_id = ? AND link_id = ?", chatId, linkId);
+
+        jdbcTemplate.update("DELETE FROM link_chat WHERE chat_id = ? AND link_id = ?", chatId, linkId);
+
+        Integer subscriptionsCount =
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM link_chat WHERE link_id = ?", Integer.class, linkId);
+
+        if (subscriptionsCount != null && subscriptionsCount == 0) {
+            jdbcTemplate.update("DELETE FROM links WHERE id = ?", linkId);
+        }
     }
 
     @Override
     public void deleteByChatId(Long chatId) {
         List<Long> linkIds =
                 jdbcTemplate.queryForList("SELECT link_id FROM link_chat WHERE chat_id = ?", Long.class, chatId);
+
+        jdbcTemplate.update("DELETE FROM link_chat_tag WHERE chat_id = ?", chatId);
         jdbcTemplate.update("DELETE FROM link_chat WHERE chat_id = ?", chatId);
+
         for (Long linkId : linkIds) {
-            Integer count = jdbcTemplate.queryForObject(
+            Integer subscriptionsCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM link_chat WHERE link_id = ?", Integer.class, linkId);
-            if (count == 0) {
-                jdbcTemplate.update("DELETE FROM link_tags WHERE link_id = ?", linkId);
+
+            if (subscriptionsCount != null && subscriptionsCount == 0) {
                 jdbcTemplate.update("DELETE FROM links WHERE id = ?", linkId);
             }
         }
@@ -226,56 +194,30 @@ public class SqlLinkStorage implements LinkStorage {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Link> findAll() {
-        String sql = """
-            SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id,
-                   COALESCE(STRING_AGG(t.name, ','), '') AS tags
+    public List<SubscriptionLinkView> findAll() {
+        List<SubscriptionLinkView> links = jdbcTemplate.query("""
+            SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
             FROM links l
             JOIN link_chat lc ON l.id = lc.link_id
-            LEFT JOIN link_tags lt ON l.id = lt.link_id
-            LEFT JOIN tags t ON lt.tag_id = t.id
-            GROUP BY l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
-            """;
+            ORDER BY l.id, lc.chat_id
+            """, linkRowMapper);
 
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
-            String tagsStr = rs.getString("tags");
-            List<String> tags = tagsStr.isEmpty() ? List.of() : Arrays.asList(tagsStr.split(","));
-            return Link.builder()
-                    .id(rs.getLong("id"))
-                    .chatId(rs.getLong("chat_id"))
-                    .url(rs.getString("url"))
-                    .lastCheckTime(
-                            rs.getTimestamp("last_check_time").toInstant().atOffset(ZoneOffset.UTC))
-                    .lastUpdateTime(
-                            rs.getTimestamp("last_update_time").toInstant().atOffset(ZoneOffset.UTC))
-                    .tags(tags)
-                    .build();
-        });
+        fillTags(links);
+        return links;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Link> findAllByUrl(String url) {
-        List<Link> links = jdbcTemplate.query(
-                "SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id "
-                        + "FROM links l JOIN link_chat lc ON l.id = lc.link_id WHERE l.url = ?",
-                (rs, rowNum) -> Link.builder()
-                        .id(rs.getLong("id"))
-                        .chatId(rs.getLong("chat_id"))
-                        .url(rs.getString("url"))
-                        .lastCheckTime(
-                                rs.getTimestamp("last_check_time").toInstant().atOffset(ZoneOffset.UTC))
-                        .lastUpdateTime(
-                                rs.getTimestamp("last_update_time").toInstant().atOffset(ZoneOffset.UTC))
-                        .build(),
-                url);
-        for (Link link : links) {
-            List<String> tags = jdbcTemplate.queryForList(
-                    "SELECT t.name FROM tags t JOIN link_tags lt ON t.id = lt.tag_id WHERE lt.link_id = ?",
-                    String.class,
-                    link.getId());
-            link.setTags(tags);
-        }
+    public List<SubscriptionLinkView> findAllByUrl(String url) {
+        List<SubscriptionLinkView> links = jdbcTemplate.query("""
+            SELECT l.id, l.url, l.last_check_time, l.last_update_time, lc.chat_id
+            FROM links l
+            JOIN link_chat lc ON l.id = lc.link_id
+            WHERE l.url = ?
+            ORDER BY lc.chat_id
+            """, linkRowMapper, url);
+
+        fillTags(links);
         return links;
     }
 
@@ -286,9 +228,11 @@ public class SqlLinkStorage implements LinkStorage {
 
     private Long findOrCreateTag(String name) {
         List<Long> ids = jdbcTemplate.queryForList("SELECT id FROM tags WHERE name = ?", Long.class, name);
+
         if (!ids.isEmpty()) {
             return ids.getFirst();
         }
+
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(
                 connection -> {
@@ -298,6 +242,36 @@ public class SqlLinkStorage implements LinkStorage {
                     return ps;
                 },
                 keyHolder);
+
         return Objects.requireNonNull(keyHolder.getKey()).longValue();
+    }
+
+    private List<String> findTagsBySubscription(long chatId, long linkId) {
+        return jdbcTemplate.queryForList("""
+            SELECT t.name
+            FROM tags t
+            JOIN link_chat_tag lct ON t.id = lct.tag_id
+            WHERE lct.chat_id = ? AND lct.link_id = ?
+            ORDER BY t.name
+            """, String.class, chatId, linkId);
+    }
+
+    private void fillTags(List<SubscriptionLinkView> links) {
+        for (SubscriptionLinkView link : links) {
+            link.setTags(findTagsBySubscription(link.getChatId(), link.getId()));
+        }
+    }
+
+    private List<String> normalizeTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return List.of();
+        }
+
+        return tags.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(LinkedHashSet::new), ArrayList::new));
     }
 }

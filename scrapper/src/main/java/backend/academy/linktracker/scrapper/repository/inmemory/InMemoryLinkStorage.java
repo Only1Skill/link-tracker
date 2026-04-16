@@ -1,6 +1,6 @@
 package backend.academy.linktracker.scrapper.repository.inmemory;
 
-import backend.academy.linktracker.scrapper.model.Link;
+import backend.academy.linktracker.scrapper.model.SubscriptionLinkView;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,20 +16,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class InMemoryLinkStorage implements LinkStorage {
 
-    private final Map<Long, List<Link>> storage = new ConcurrentHashMap<>();
+    private final Map<Long, List<SubscriptionLinkView>> storage = new ConcurrentHashMap<>();
     private final AtomicLong nextId = new AtomicLong(1);
 
-    public Link save(long chatId, Link link) {
+    public SubscriptionLinkView save(long chatId, SubscriptionLinkView link) {
         link.setId(nextId.getAndIncrement());
         storage.computeIfAbsent(chatId, k -> new ArrayList<>()).add(link);
         return link;
     }
 
-    public List<Link> findByChatId(long chatId) {
+    public List<SubscriptionLinkView> findByChatId(long chatId) {
         return storage.getOrDefault(chatId, new ArrayList<>());
     }
 
-    public Optional<Link> findByChatIdAndUrl(long chatId, String url) {
+    public Optional<SubscriptionLinkView> findByChatIdAndUrl(long chatId, String url) {
         return storage.getOrDefault(chatId, new ArrayList<>()).stream()
                 .filter(link -> link.getUrl().equals(url))
                 .findFirst();
@@ -44,11 +44,11 @@ public class InMemoryLinkStorage implements LinkStorage {
         storage.remove(chatId);
     }
 
-    public List<Link> findAll() {
+    public List<SubscriptionLinkView> findAll() {
         return storage.values().stream().flatMap(List::stream).toList();
     }
 
-    public List<Link> findAllByUrl(String url) {
+    public List<SubscriptionLinkView> findAllByUrl(String url) {
         return storage.values().stream()
                 .flatMap(List::stream)
                 .filter(link -> link.getUrl().equals(url))

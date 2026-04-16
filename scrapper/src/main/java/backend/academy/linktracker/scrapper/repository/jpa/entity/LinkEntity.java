@@ -1,10 +1,20 @@
 package backend.academy.linktracker.scrapper.repository.jpa.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "links")
@@ -19,7 +29,7 @@ public class LinkEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "url", nullable = false, unique = true)
     private String url;
 
     @Column(name = "last_check_time", nullable = false)
@@ -28,35 +38,7 @@ public class LinkEntity {
     @Column(name = "last_update_time", nullable = false)
     private OffsetDateTime lastUpdateTime;
 
-    @ManyToMany
+    @OneToMany(mappedBy = "link")
     @Builder.Default
-    @JoinTable(
-            name = "link_chat",
-            joinColumns = @JoinColumn(name = "link_id"),
-            inverseJoinColumns = @JoinColumn(name = "chat_id"))
-    private Set<ChatEntity> chats = new HashSet<>();
-
-    @ManyToMany
-    @Builder.Default
-    @JoinTable(
-            name = "link_tags",
-            joinColumns = @JoinColumn(name = "link_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id"))
-    private Set<TagEntity> tags = new HashSet<>();
-
-    @PrePersist
-    protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        if (lastCheckTime == null) {
-            lastCheckTime = now;
-        }
-        if (lastUpdateTime == null) {
-            lastUpdateTime = now;
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastCheckTime = OffsetDateTime.now();
-    }
+    private Set<SubscriptionEntity> subscriptions = new HashSet<>();
 }

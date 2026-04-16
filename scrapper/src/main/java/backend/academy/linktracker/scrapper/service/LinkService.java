@@ -5,13 +5,14 @@ import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
 import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
 import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
-import backend.academy.linktracker.scrapper.model.Link;
+import backend.academy.linktracker.scrapper.model.SubscriptionLinkView;
 import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -45,15 +46,15 @@ public class LinkService {
             throw new LinkDuplicateException(request.link());
         }
 
-        Link link = Link.builder()
+        SubscriptionLinkView link = SubscriptionLinkView.builder()
                 .chatId(chatId)
                 .url(request.link())
                 .tags(request.tags())
-                .lastCheckTime(OffsetDateTime.now())
-                .lastUpdateTime(OffsetDateTime.now())
+                .lastCheckTime(OffsetDateTime.now(ZoneOffset.UTC))
+                .lastUpdateTime(OffsetDateTime.now(ZoneOffset.UTC))
                 .build();
 
-        Link saved = linkStorage.save(chatId, link);
+        SubscriptionLinkView saved = linkStorage.save(chatId, link);
 
         List<String> safeTags = saved.getTags() == null
                 ? null
@@ -77,7 +78,7 @@ public class LinkService {
             throw new ChatNotFoundException(chatId);
         }
 
-        List<Link> links = linkStorage.findByChatId(chatId, tag);
+        List<SubscriptionLinkView> links = linkStorage.findByChatId(chatId, tag);
         return links.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -96,13 +97,14 @@ public class LinkService {
             throw new ChatNotFoundException(chatId);
         }
 
-        Link link = linkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
+        SubscriptionLinkView link =
+                linkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
         linkStorage.delete(chatId, url);
         log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
     }
 
-    private LinkResponse mapToResponse(Link link) {
+    private LinkResponse mapToResponse(SubscriptionLinkView link) {
         return new LinkResponse(link.getId(), URI.create(link.getUrl()), link.getTags(), link.getLastUpdateTime());
     }
 }
