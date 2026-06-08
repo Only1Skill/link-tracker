@@ -5,11 +5,10 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface TrackedLinkStorage {
-    List<TrackedLink> findNextBatchForCheck(int limit);
+
+    List<TrackedLink> findNextBatchForCheck(int limit, OffsetDateTime checkBefore);
 
     List<Long> findSubscriberChatIds(Long linkId);
 
-    void updateCheckTime(Long lindId, OffsetDateTime checkedAt);
-
-    void updateLastUpdateTime(Long linkId, OffsetDateTime checkedAt);
+    void updateProcessingState(Long linkId, OffsetDateTime checkedAt, OffsetDateTime lastUpdatedAt);
 }

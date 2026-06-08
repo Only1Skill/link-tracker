@@ -2,6 +2,7 @@ package backend.academy.linktracker.scrapper.service;
 
 import backend.academy.linktracker.scrapper.client.BotClient;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
+import backend.academy.linktracker.scrapper.dto.LinkUpdateBatch;
 import backend.academy.linktracker.scrapper.model.LinkEvent;
 import backend.academy.linktracker.scrapper.model.TrackedLink;
 import backend.academy.linktracker.scrapper.service.formatter.UpdateMessageFormatter;
@@ -41,19 +42,20 @@ public class NotificationService {
             return;
         }
 
-        for (LinkEvent event : events) {
-            String description = updateMessageFormatter.format(event);
+        List<LinkUpdate> updates = events.stream()
+                .map(event -> new LinkUpdate(
+                        trackedLink.getId(),
+                        trackedLink.getUrl(),
+                        updateMessageFormatter.format(event),
+                        normalizedChatIds))
+                .toList();
 
-            LinkUpdate update =
-                    new LinkUpdate(trackedLink.getId(), trackedLink.getUrl(), description, normalizedChatIds);
+        botClient.sendUpdates(new LinkUpdateBatch(updates));
 
-            botClient.sendUpdate(update);
-
-            log.debug(
-                    "Уведомление отправлено для ссылки id={}, eventType={}, subscribers={}",
-                    trackedLink.getId(),
-                    event.getType(),
-                    normalizedChatIds.size());
-        }
+        log.debug(
+                "Batch уведомлений отправлен для ссылки id={}, events={}, subscribers={}",
+                trackedLink.getId(),
+                updates.size(),
+                normalizedChatIds.size());
     }
 }

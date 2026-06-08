@@ -2,7 +2,6 @@ package backend.academy.linktracker.scrapper.repository.jpa;
 
 import backend.academy.linktracker.scrapper.repository.jpa.entity.LinkEntity;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,23 +16,24 @@ public interface JpaLinkRepository extends JpaRepository<LinkEntity, Long> {
     @Query("""
         select l
         from LinkEntity l
+        where l.lastCheckTime < :checkBefore
         order by l.lastCheckTime asc
         """)
-    List<LinkEntity> findNextBatchForCheck(Pageable pageable);
+    java.util.List<LinkEntity> findNextBatchForCheck(
+            @Param("checkBefore") OffsetDateTime checkBefore,
+            Pageable pageable
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-           update LinkEntity l
-           set l.lastCheckTime = :checkedAt
-           where l.id = :linkId
-           """)
-    void updateCheckTime(@Param("linkId") Long linkId, @Param("checkedAt") OffsetDateTime checkedAt);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-           update LinkEntity l
-           set l.lastUpdateTime = :checkedAt
-           where l.id = :linkId
-           """)
-    void updateLastUpdateTime(@Param("linkId") Long linkId, @Param("checkedAt") OffsetDateTime checkedAt);
+        update LinkEntity l
+        set l.lastCheckTime = :checkedAt,
+            l.lastUpdateTime = :lastUpdatedAt
+        where l.id = :linkId
+        """)
+    void updateProcessingState(
+            @Param("linkId") Long linkId,
+            @Param("checkedAt") OffsetDateTime checkedAt,
+            @Param("lastUpdatedAt") OffsetDateTime lastUpdatedAt
+    );
 }

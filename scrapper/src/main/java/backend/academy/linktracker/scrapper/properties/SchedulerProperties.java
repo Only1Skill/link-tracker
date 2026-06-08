@@ -7,6 +7,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.validator.constraints.time.DurationMax;
+import org.hibernate.validator.constraints.time.DurationMin;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -18,6 +20,8 @@ import org.springframework.validation.annotation.Validated;
 @NoArgsConstructor
 public class SchedulerProperties {
 
+    @DurationMin(seconds = 5)
+    @DurationMax(minutes = 1)
     private Duration interval = Duration.ofSeconds(10);
 
     @Min(50)

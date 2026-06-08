@@ -2,8 +2,10 @@ package backend.academy.linktracker.scrapper.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
+import backend.academy.linktracker.scrapper.dto.BatchProcessingResult;
 import backend.academy.linktracker.scrapper.test.IntegrationTestBase;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.sql.Timestamp;
@@ -20,8 +22,17 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 @ActiveProfiles("test")
-@TestPropertySource(properties = "app.database.access-type=SQL")
+@TestPropertySource(properties = {
+        "app.database.access-type=SQL",
+        "app.scheduler.enabled=false",
+        "spring.task.scheduling.enabled=false"
+})
 class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
+
+    private static final long CHAT_ID = 202L;
+    private static final String URL = "https://stackoverflow.com/questions/12345/how-to-write-tests";
+    private static final OffsetDateTime BEFORE_EVENT_TIME =
+            OffsetDateTime.parse("2026-04-16T09:00:00Z");
 
     @RegisterExtension
     static WireMockExtension wireMock = WireMockExtension.newInstance()
@@ -55,25 +66,19 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
     void setUp() {
         wireMock.resetAll();
 
-        wireMock.stubFor(post(urlEqualTo("/updates")).willReturn(aResponse().withStatus(200)));
+        wireMock.stubFor(post(urlEqualTo("/updates/batch"))
+                .willReturn(aResponse().withStatus(200)));
     }
 
     @Test
-    void pollOnce_shouldSendStackOverflowAnswerNotification() {
-        long chatId = 202L;
-        String url = "https://stackoverflow.com/questions/12345/how-to-write-tests";
+    void pollOnce_shouldSendStackOverflowAnswerNotificationBatch() {
+        chatService.register(CHAT_ID);
+        linkService.addLink(CHAT_ID, new AddLinkRequest(URL, List.of()));
 
-        chatService.register(chatId);
-        linkService.addLink(chatId, new AddLinkRequest(url, List.of()));
+        makeLinkEligibleForPolling(URL, BEFORE_EVENT_TIME);
 
-        OffsetDateTime oldTime = OffsetDateTime.now().minusDays(1);
-        jdbcTemplate.update(
-                "UPDATE links SET last_check_time = ?, last_update_time = ? WHERE url = ?",
-                Timestamp.from(oldTime.toInstant()),
-                Timestamp.from(oldTime.toInstant()),
-                url);
-
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345")).willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345"))
+                .willReturn(okJson("""
                         {
                           "items": [
                             {
@@ -88,7 +93,8 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
                         }
                         """)));
 
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/answers")).willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/answers"))
+                .willReturn(okJson("""
                         {
                           "items": [
                             {
@@ -104,19 +110,37 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
                         }
                         """)));
 
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/comments")).willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/comments"))
+                .willReturn(okJson("""
                         {
                           "items": []
                         }
                         """)));
 
-        linkPollingService.pollOnce();
+        BatchProcessingResult result = linkPollingService.pollOnce();
+
+        assertEquals(1, result.total());
+        assertEquals(1, result.successCount());
+        assertEquals(0, result.failedCount());
+        assertEquals(1, result.updatedLinksCount());
 
         wireMock.verify(
                 1,
-                postRequestedFor(urlEqualTo("/updates"))
+                postRequestedFor(urlEqualTo("/updates/batch"))
+                        .withRequestBody(containing("updates"))
                         .withRequestBody(containing("How to write tests?"))
                         .withRequestBody(containing("answer-author"))
-                        .withRequestBody(containing(url)));
+                        .withRequestBody(containing(URL))
+                        .withRequestBody(containing(String.valueOf(CHAT_ID))));
+
+        wireMock.verify(0, postRequestedFor(urlEqualTo("/updates")));
+    }
+
+    private void makeLinkEligibleForPolling(String url, OffsetDateTime lastProcessedAt) {
+        jdbcTemplate.update(
+                "UPDATE links SET last_check_time = ?, last_update_time = ? WHERE url = ?",
+                Timestamp.from(lastProcessedAt.toInstant()),
+                Timestamp.from(lastProcessedAt.toInstant()),
+                url);
     }
 }

@@ -16,6 +16,8 @@ import org.springframework.validation.annotation.Validated;
 @NoArgsConstructor
 public class NotificationProperties {
 
+    public static final int DEFAULT_PREVIEW_LENGTH = 200;
+
     @Min(1)
-    private int previewLength;
+    private int previewLength = DEFAULT_PREVIEW_LENGTH;
 }

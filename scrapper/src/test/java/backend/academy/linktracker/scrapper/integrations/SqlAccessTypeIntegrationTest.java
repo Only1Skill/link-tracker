@@ -1,20 +1,24 @@
 package backend.academy.linktracker.scrapper.integrations;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
-import backend.academy.linktracker.scrapper.repository.TagStorage;
 import backend.academy.linktracker.scrapper.repository.TrackedLinkStorage;
+import backend.academy.linktracker.scrapper.repository.jpa.impl.JpaChatStorage;
+import backend.academy.linktracker.scrapper.repository.jpa.impl.JpaLinkStorage;
+import backend.academy.linktracker.scrapper.repository.jpa.impl.JpaTrackedLinkStorage;
 import backend.academy.linktracker.scrapper.repository.sql.SqlChatStorage;
 import backend.academy.linktracker.scrapper.repository.sql.SqlLinkStorage;
-import backend.academy.linktracker.scrapper.repository.sql.SqlTagStorage;
 import backend.academy.linktracker.scrapper.repository.sql.SqlTrackedLinkStorage;
-import backend.academy.linktracker.scrapper.test.SqlIntegrationTestBase;
+import backend.academy.linktracker.scrapper.test.IntegrationTestBase;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
 
-class SqlAccessTypeIntegrationTest extends SqlIntegrationTestBase {
+import static org.assertj.core.api.Assertions.assertThat;
+
+@TestPropertySource(properties = "app.database.access-type=SQL")
+class SqlAccessTypeIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private ChatStorage chatStorage;
@@ -23,16 +27,23 @@ class SqlAccessTypeIntegrationTest extends SqlIntegrationTestBase {
     private LinkStorage linkStorage;
 
     @Autowired
-    private TagStorage tagStorage;
-
-    @Autowired
     private TrackedLinkStorage trackedLinkStorage;
 
     @Test
-    void shouldUseSqlImplementations() {
-        assertThat(chatStorage).isInstanceOf(SqlChatStorage.class);
-        assertThat(linkStorage).isInstanceOf(SqlLinkStorage.class);
-        assertThat(tagStorage).isInstanceOf(SqlTagStorage.class);
-        assertThat(trackedLinkStorage).isInstanceOf(SqlTrackedLinkStorage.class);
+    void shouldUseSqlChatStorage() {
+        assertThat(AopProxyUtils.ultimateTargetClass(chatStorage)).isEqualTo(SqlChatStorage.class);
+        assertThat(AopProxyUtils.ultimateTargetClass(chatStorage)).isNotEqualTo(JpaChatStorage.class);
+    }
+
+    @Test
+    void shouldUseSqlLinkStorage() {
+        assertThat(AopProxyUtils.ultimateTargetClass(linkStorage)).isEqualTo(SqlLinkStorage.class);
+        assertThat(AopProxyUtils.ultimateTargetClass(linkStorage)).isNotEqualTo(JpaLinkStorage.class);
+    }
+
+    @Test
+    void shouldUseSqlTrackedLinkStorage() {
+        assertThat(AopProxyUtils.ultimateTargetClass(trackedLinkStorage)).isEqualTo(SqlTrackedLinkStorage.class);
+        assertThat(AopProxyUtils.ultimateTargetClass(trackedLinkStorage)).isNotEqualTo(JpaTrackedLinkStorage.class);
     }
 }

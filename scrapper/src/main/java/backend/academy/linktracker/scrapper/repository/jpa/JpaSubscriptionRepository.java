@@ -40,7 +40,6 @@ public interface JpaSubscriptionRepository extends JpaRepository<SubscriptionEnt
         select s.chat.id
         from SubscriptionEntity s
         where s.link.id = :linkId
-        order by s.chat.id
         """)
-    List<Long> findSubscriberChatIdsByLinkId(@Param("linkId") Long linkId);
+    List<Long> findChatIdsByLinkId(@Param("linkId") Long linkId);
 }

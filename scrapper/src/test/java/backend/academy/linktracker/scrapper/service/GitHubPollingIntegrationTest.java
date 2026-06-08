@@ -2,8 +2,10 @@ package backend.academy.linktracker.scrapper.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
+import backend.academy.linktracker.scrapper.dto.BatchProcessingResult;
 import backend.academy.linktracker.scrapper.test.IntegrationTestBase;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.sql.Timestamp;
@@ -20,8 +22,17 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 @ActiveProfiles("test")
-@TestPropertySource(properties = "app.database.access-type=ORM")
+@TestPropertySource(properties = {
+        "app.database.access-type=ORM",
+        "app.scheduler.enabled=false",
+        "spring.task.scheduling.enabled=false"
+})
 class GitHubPollingIntegrationTest extends IntegrationTestBase {
+
+    private static final long CHAT_ID = 101L;
+    private static final String URL = "https://github.com/test-owner/test-repo";
+    private static final OffsetDateTime BEFORE_EVENT_TIME =
+            OffsetDateTime.parse("2026-04-16T09:00:00Z");
 
     @RegisterExtension
     static WireMockExtension wireMock = WireMockExtension.newInstance()
@@ -55,26 +66,19 @@ class GitHubPollingIntegrationTest extends IntegrationTestBase {
     void setUp() {
         wireMock.resetAll();
 
-        wireMock.stubFor(post(urlEqualTo("/updates")).willReturn(aResponse().withStatus(200)));
+        wireMock.stubFor(post(urlEqualTo("/updates/batch"))
+                .willReturn(aResponse().withStatus(200)));
     }
 
     @Test
-    void pollOnce_shouldSendGithubIssueNotification() {
-        long chatId = 101L;
-        String url = "https://github.com/test-owner/test-repo";
+    void pollOnce_shouldSendGithubIssueNotificationBatch() {
+        chatService.register(CHAT_ID);
+        linkService.addLink(CHAT_ID, new AddLinkRequest(URL, List.of()));
 
-        chatService.register(chatId);
-        linkService.addLink(chatId, new AddLinkRequest(url, List.of()));
+        makeLinkEligibleForPolling(URL, BEFORE_EVENT_TIME);
 
-        OffsetDateTime oldTime = OffsetDateTime.now().minusDays(1);
-        jdbcTemplate.update(
-                "UPDATE links SET last_check_time = ?, last_update_time = ? WHERE url = ?",
-                Timestamp.from(oldTime.toInstant()),
-                Timestamp.from(oldTime.toInstant()),
-                url);
-
-        wireMock.stubFor(
-                get(urlPathEqualTo("/repos/test-owner/test-repo/issues")).willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/repos/test-owner/test-repo/issues"))
+                .willReturn(okJson("""
                         [
                           {
                             "id": 1,
@@ -88,13 +92,30 @@ class GitHubPollingIntegrationTest extends IntegrationTestBase {
                         ]
                         """)));
 
-        linkPollingService.pollOnce();
+        BatchProcessingResult result = linkPollingService.pollOnce();
+
+        assertEquals(1, result.total());
+        assertEquals(1, result.successCount());
+        assertEquals(0, result.failedCount());
+        assertEquals(1, result.updatedLinksCount());
 
         wireMock.verify(
                 1,
-                postRequestedFor(urlEqualTo("/updates"))
+                postRequestedFor(urlEqualTo("/updates/batch"))
+                        .withRequestBody(containing("updates"))
                         .withRequestBody(containing("New issue title"))
                         .withRequestBody(containing("alice"))
-                        .withRequestBody(containing(url)));
+                        .withRequestBody(containing(URL))
+                        .withRequestBody(containing(String.valueOf(CHAT_ID))));
+
+        wireMock.verify(0, postRequestedFor(urlEqualTo("/updates")));
+    }
+
+    private void makeLinkEligibleForPolling(String url, OffsetDateTime lastProcessedAt) {
+        jdbcTemplate.update(
+                "UPDATE links SET last_check_time = ?, last_update_time = ? WHERE url = ?",
+                Timestamp.from(lastProcessedAt.toInstant()),
+                Timestamp.from(lastProcessedAt.toInstant()),
+                url);
     }
 }

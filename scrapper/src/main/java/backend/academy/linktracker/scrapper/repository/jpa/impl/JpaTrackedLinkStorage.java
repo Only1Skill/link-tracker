@@ -24,8 +24,8 @@ public class JpaTrackedLinkStorage implements TrackedLinkStorage {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TrackedLink> findNextBatchForCheck(int limit) {
-        return linkRepository.findNextBatchForCheck(PageRequest.of(0, limit)).stream()
+    public List<TrackedLink> findNextBatchForCheck(int limit, OffsetDateTime checkBefore) {
+        return linkRepository.findNextBatchForCheck(checkBefore, PageRequest.of(0, limit)).stream()
                 .map(this::toTrackedLink)
                 .toList();
     }
@@ -33,17 +33,12 @@ public class JpaTrackedLinkStorage implements TrackedLinkStorage {
     @Override
     @Transactional(readOnly = true)
     public List<Long> findSubscriberChatIds(Long linkId) {
-        return subscriptionRepository.findSubscriberChatIdsByLinkId(linkId);
+        return subscriptionRepository.findChatIdsByLinkId(linkId);
     }
 
     @Override
-    public void updateCheckTime(Long linkId, OffsetDateTime checkedAt) {
-        linkRepository.updateCheckTime(linkId, checkedAt);
-    }
-
-    @Override
-    public void updateLastUpdateTime(Long linkId, OffsetDateTime checkedAt) {
-        linkRepository.updateLastUpdateTime(linkId, checkedAt);
+    public void updateProcessingState(Long linkId, OffsetDateTime checkedAt, OffsetDateTime lastUpdatedAt) {
+        linkRepository.updateProcessingState(linkId, checkedAt, lastUpdatedAt);
     }
 
     private TrackedLink toTrackedLink(LinkEntity entity) {

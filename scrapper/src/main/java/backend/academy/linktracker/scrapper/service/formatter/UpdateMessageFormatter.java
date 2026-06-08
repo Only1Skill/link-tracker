@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UpdateMessageFormatter {
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
 
     private final PreviewExtractor previewExtractor;
 
@@ -24,65 +25,62 @@ public class UpdateMessageFormatter {
     }
 
     private String formatGithubIssue(LinkEvent event) {
-        return String.format(
-                "Обнаружено новое обновление GitHub%n%n"
-                        + "Тип: Issue%n"
-                        + "Название: %s%n"
-                        + "Автор: %s%n"
-                        + "Время создания: %s%n"
-                        + "Превью описания: %s%n"
-                        + "Ссылка: %s",
-                safe(event.getTitle()),
-                safe(event.getAuthor()),
-                formatDateTime(event.getCreatedAt()),
-                previewExtractor.makePreview(event.getContent()),
-                safe(event.getEventUrl()));
+        return formatMessage(
+                event,
+                "GitHub",
+                "Issue",
+                "Название",
+                "Превью описания");
     }
 
     private String formatGithubPullRequest(LinkEvent event) {
-        return String.format(
-                "Обнаружено новое обновление GitHub%n%n"
-                        + "Тип: Pull Request%n"
-                        + "Название: %s%n"
-                        + "Автор: %s%n"
-                        + "Время создания: %s%n"
-                        + "Превью описания: %s%n"
-                        + "Ссылка: %s",
-                safe(event.getTitle()),
-                safe(event.getAuthor()),
-                formatDateTime(event.getCreatedAt()),
-                previewExtractor.makePreview(event.getContent()),
-                safe(event.getEventUrl()));
+        return formatMessage(
+                event,
+                "GitHub",
+                "Pull Request",
+                "Название",
+                "Превью описания");
     }
 
     private String formatStackOverflowAnswer(LinkEvent event) {
-        return String.format(
-                "Обнаружено новое обновление StackOverflow%n%n"
-                        + "Тип: Ответ%n"
-                        + "Тема вопроса: %s%n"
-                        + "Автор: %s%n"
-                        + "Время создания: %s%n"
-                        + "Превью ответа: %s%n"
-                        + "Ссылка: %s",
-                safe(event.getTitle()),
-                safe(event.getAuthor()),
-                formatDateTime(event.getCreatedAt()),
-                previewExtractor.makePreview(event.getContent()),
-                safe(event.getEventUrl()));
+        return formatMessage(
+                event,
+                "StackOverflow",
+                "Ответ",
+                "Тема вопроса",
+                "Превью ответа");
     }
 
     private String formatStackOverflowComment(LinkEvent event) {
+        return formatMessage(
+                event,
+                "StackOverflow",
+                "Комментарий",
+                "Тема вопроса",
+                "Превью комментария");
+    }
+
+    private String formatMessage(
+            LinkEvent event,
+            String source,
+            String type,
+            String titleLabel,
+            String previewLabel) {
         return String.format(
-                "Обнаружено новое обновление StackOverflow%n%n"
-                        + "Тип: Комментарий%n"
-                        + "Тема вопроса: %s%n"
+                "Обнаружено новое обновление %s%n%n"
+                        + "Тип: %s%n"
+                        + "%s: %s%n"
                         + "Автор: %s%n"
                         + "Время создания: %s%n"
-                        + "Превью комментария: %s%n"
+                        + "%s: %s%n"
                         + "Ссылка: %s",
+                source,
+                type,
+                titleLabel,
                 safe(event.getTitle()),
                 safe(event.getAuthor()),
                 formatDateTime(event.getCreatedAt()),
+                previewLabel,
                 previewExtractor.makePreview(event.getContent()),
                 safe(event.getEventUrl()));
     }
