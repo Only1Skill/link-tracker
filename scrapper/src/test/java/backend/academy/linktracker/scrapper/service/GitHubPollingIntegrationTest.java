@@ -22,17 +22,17 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "app.database.access-type=ORM",
-        "app.scheduler.enabled=false",
-        "spring.task.scheduling.enabled=false"
-})
+@TestPropertySource(
+        properties = {
+            "app.database.access-type=ORM",
+            "app.scheduler.enabled=false",
+            "spring.task.scheduling.enabled=false"
+        })
 class GitHubPollingIntegrationTest extends IntegrationTestBase {
 
     private static final long CHAT_ID = 101L;
     private static final String URL = "https://github.com/test-owner/test-repo";
-    private static final OffsetDateTime BEFORE_EVENT_TIME =
-            OffsetDateTime.parse("2026-04-16T09:00:00Z");
+    private static final OffsetDateTime BEFORE_EVENT_TIME = OffsetDateTime.parse("2026-04-16T09:00:00Z");
 
     @RegisterExtension
     static WireMockExtension wireMock = WireMockExtension.newInstance()
@@ -66,8 +66,8 @@ class GitHubPollingIntegrationTest extends IntegrationTestBase {
     void setUp() {
         wireMock.resetAll();
 
-        wireMock.stubFor(post(urlEqualTo("/updates/batch"))
-                .willReturn(aResponse().withStatus(200)));
+        wireMock.stubFor(
+                post(urlEqualTo("/updates/batch")).willReturn(aResponse().withStatus(200)));
     }
 
     @Test
@@ -77,8 +77,8 @@ class GitHubPollingIntegrationTest extends IntegrationTestBase {
 
         makeLinkEligibleForPolling(URL, BEFORE_EVENT_TIME);
 
-        wireMock.stubFor(get(urlPathEqualTo("/repos/test-owner/test-repo/issues"))
-                .willReturn(okJson("""
+        wireMock.stubFor(
+                get(urlPathEqualTo("/repos/test-owner/test-repo/issues")).willReturn(okJson("""
                         [
                           {
                             "id": 1,

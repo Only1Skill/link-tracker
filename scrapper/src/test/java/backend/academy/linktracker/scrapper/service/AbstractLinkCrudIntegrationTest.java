@@ -1,5 +1,7 @@
 package backend.academy.linktracker.scrapper.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import backend.academy.linktracker.scrapper.model.SubscriptionLinkView;
 import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
@@ -9,8 +11,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class AbstractLinkCrudIntegrationTest extends IntegrationTestBase {
 
@@ -33,10 +33,8 @@ public abstract class AbstractLinkCrudIntegrationTest extends IntegrationTestBas
 
     @Test
     void save_shouldPersistSubscriptionWithTags() {
-        SubscriptionLinkView saved = linkStorage.save(
-                FIRST_CHAT_ID,
-                newLink("https://github.com/user/repo", List.of("work", "backend"))
-        );
+        SubscriptionLinkView saved =
+                linkStorage.save(FIRST_CHAT_ID, newLink("https://github.com/user/repo", List.of("work", "backend")));
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getChatId()).isEqualTo(FIRST_CHAT_ID);
@@ -107,7 +105,8 @@ public abstract class AbstractLinkCrudIntegrationTest extends IntegrationTestBas
 
         assertThat(linkStorage.findByChatId(FIRST_CHAT_ID)).isEmpty();
         assertThat(linkStorage.findByChatId(SECOND_CHAT_ID)).hasSize(1);
-        assertThat(linkStorage.findByChatId(SECOND_CHAT_ID).getFirst().getTags()).containsExactly("study");
+        assertThat(linkStorage.findByChatId(SECOND_CHAT_ID).getFirst().getTags())
+                .containsExactly("study");
 
         List<SubscriptionLinkView> allByUrl = linkStorage.findAllByUrl(url);
         assertThat(allByUrl).hasSize(1);
@@ -148,10 +147,7 @@ public abstract class AbstractLinkCrudIntegrationTest extends IntegrationTestBas
                 .containsExactlyInAnyOrder(FIRST_CHAT_ID, SECOND_CHAT_ID);
         assertThat(all)
                 .extracting(SubscriptionLinkView::getUrl)
-                .containsExactlyInAnyOrder(
-                        "https://github.com/user/repo-1",
-                        "https://github.com/user/repo-2"
-                );
+                .containsExactlyInAnyOrder("https://github.com/user/repo-1", "https://github.com/user/repo-2");
     }
 
     private SubscriptionLinkView newLink(String url, List<String> tags) {

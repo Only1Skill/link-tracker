@@ -39,18 +39,13 @@ public class SqlTrackedLinkStorage implements TrackedLinkStorage {
                         .lastUpdateTime(rs.getObject("last_update_time", OffsetDateTime.class))
                         .build(),
                 Timestamp.from(checkBefore.toInstant()),
-                limit
-        );
+                limit);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Long> findSubscriberChatIds(Long linkId) {
-        return jdbcTemplate.queryForList(
-                "select chat_id from link_chat where link_id = ?",
-                Long.class,
-                linkId
-        );
+        return jdbcTemplate.queryForList("select chat_id from link_chat where link_id = ?", Long.class, linkId);
     }
 
     @Override
@@ -61,10 +56,6 @@ public class SqlTrackedLinkStorage implements TrackedLinkStorage {
                 set last_check_time = ?,
                     last_update_time = ?
                 where id = ?
-                """,
-                Timestamp.from(checkedAt.toInstant()),
-                Timestamp.from(lastUpdatedAt.toInstant()),
-                linkId
-        );
+                """, Timestamp.from(checkedAt.toInstant()), Timestamp.from(lastUpdatedAt.toInstant()), linkId);
     }
 }

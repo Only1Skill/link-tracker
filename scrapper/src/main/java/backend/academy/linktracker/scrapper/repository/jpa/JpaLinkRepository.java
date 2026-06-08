@@ -20,9 +20,7 @@ public interface JpaLinkRepository extends JpaRepository<LinkEntity, Long> {
         order by l.lastCheckTime asc
         """)
     java.util.List<LinkEntity> findNextBatchForCheck(
-            @Param("checkBefore") OffsetDateTime checkBefore,
-            Pageable pageable
-    );
+            @Param("checkBefore") OffsetDateTime checkBefore, Pageable pageable);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -34,6 +32,5 @@ public interface JpaLinkRepository extends JpaRepository<LinkEntity, Long> {
     void updateProcessingState(
             @Param("linkId") Long linkId,
             @Param("checkedAt") OffsetDateTime checkedAt,
-            @Param("lastUpdatedAt") OffsetDateTime lastUpdatedAt
-    );
+            @Param("lastUpdatedAt") OffsetDateTime lastUpdatedAt);
 }

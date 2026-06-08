@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UpdateMessageFormatter {
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
 
     private final PreviewExtractor previewExtractor;
 
@@ -25,47 +24,22 @@ public class UpdateMessageFormatter {
     }
 
     private String formatGithubIssue(LinkEvent event) {
-        return formatMessage(
-                event,
-                "GitHub",
-                "Issue",
-                "Название",
-                "Превью описания");
+        return formatMessage(event, "GitHub", "Issue", "Название", "Превью описания");
     }
 
     private String formatGithubPullRequest(LinkEvent event) {
-        return formatMessage(
-                event,
-                "GitHub",
-                "Pull Request",
-                "Название",
-                "Превью описания");
+        return formatMessage(event, "GitHub", "Pull Request", "Название", "Превью описания");
     }
 
     private String formatStackOverflowAnswer(LinkEvent event) {
-        return formatMessage(
-                event,
-                "StackOverflow",
-                "Ответ",
-                "Тема вопроса",
-                "Превью ответа");
+        return formatMessage(event, "StackOverflow", "Ответ", "Тема вопроса", "Превью ответа");
     }
 
     private String formatStackOverflowComment(LinkEvent event) {
-        return formatMessage(
-                event,
-                "StackOverflow",
-                "Комментарий",
-                "Тема вопроса",
-                "Превью комментария");
+        return formatMessage(event, "StackOverflow", "Комментарий", "Тема вопроса", "Превью комментария");
     }
 
-    private String formatMessage(
-            LinkEvent event,
-            String source,
-            String type,
-            String titleLabel,
-            String previewLabel) {
+    private String formatMessage(LinkEvent event, String source, String type, String titleLabel, String previewLabel) {
         return String.format(
                 "Обнаружено новое обновление %s%n%n"
                         + "Тип: %s%n"

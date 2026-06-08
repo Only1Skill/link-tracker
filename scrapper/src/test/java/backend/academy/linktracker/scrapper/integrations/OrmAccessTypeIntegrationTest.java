@@ -1,5 +1,7 @@
 package backend.academy.linktracker.scrapper.integrations;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import backend.academy.linktracker.scrapper.repository.ChatStorage;
 import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.repository.TrackedLinkStorage;
@@ -14,8 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @TestPropertySource(properties = "app.database.access-type=ORM")
 class OrmAccessTypeIntegrationTest extends IntegrationTestBase {

@@ -22,17 +22,17 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "app.database.access-type=SQL",
-        "app.scheduler.enabled=false",
-        "spring.task.scheduling.enabled=false"
-})
+@TestPropertySource(
+        properties = {
+            "app.database.access-type=SQL",
+            "app.scheduler.enabled=false",
+            "spring.task.scheduling.enabled=false"
+        })
 class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
 
     private static final long CHAT_ID = 202L;
     private static final String URL = "https://stackoverflow.com/questions/12345/how-to-write-tests";
-    private static final OffsetDateTime BEFORE_EVENT_TIME =
-            OffsetDateTime.parse("2026-04-16T09:00:00Z");
+    private static final OffsetDateTime BEFORE_EVENT_TIME = OffsetDateTime.parse("2026-04-16T09:00:00Z");
 
     @RegisterExtension
     static WireMockExtension wireMock = WireMockExtension.newInstance()
@@ -66,8 +66,8 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
     void setUp() {
         wireMock.resetAll();
 
-        wireMock.stubFor(post(urlEqualTo("/updates/batch"))
-                .willReturn(aResponse().withStatus(200)));
+        wireMock.stubFor(
+                post(urlEqualTo("/updates/batch")).willReturn(aResponse().withStatus(200)));
     }
 
     @Test
@@ -77,8 +77,7 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
 
         makeLinkEligibleForPolling(URL, BEFORE_EVENT_TIME);
 
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345"))
-                .willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345")).willReturn(okJson("""
                         {
                           "items": [
                             {
@@ -93,8 +92,7 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
                         }
                         """)));
 
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/answers"))
-                .willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/answers")).willReturn(okJson("""
                         {
                           "items": [
                             {
@@ -110,8 +108,7 @@ class StackOverflowPollingIntegrationTest extends IntegrationTestBase {
                         }
                         """)));
 
-        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/comments"))
-                .willReturn(okJson("""
+        wireMock.stubFor(get(urlPathEqualTo("/questions/12345/comments")).willReturn(okJson("""
                         {
                           "items": []
                         }

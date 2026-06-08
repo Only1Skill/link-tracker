@@ -46,9 +46,7 @@ public class PollingFailureReportService {
         }
 
         List<ChatNotification> notifications = errorsByChat.entrySet().stream()
-                .map(entry -> new ChatNotification(
-                        buildFailureMessage(entry.getValue()),
-                        List.of(entry.getKey())))
+                .map(entry -> new ChatNotification(buildFailureMessage(entry.getValue()), List.of(entry.getKey())))
                 .toList();
 
         botClient.sendNotifications(new ChatNotificationBatch(notifications));

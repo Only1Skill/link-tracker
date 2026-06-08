@@ -18,11 +18,8 @@ class BotUpdateControllerTest {
 
     @Test
     void sendUpdate_shouldSendMessageToEveryChatId() {
-        LinkUpdate update = new LinkUpdate(
-                1L,
-                "https://github.com/test-owner/test-repo",
-                "New issue title",
-                List.of(100L, 200L));
+        LinkUpdate update =
+                new LinkUpdate(1L, "https://github.com/test-owner/test-repo", "New issue title", List.of(100L, 200L));
 
         controller.sendUpdate(update);
 
@@ -32,17 +29,11 @@ class BotUpdateControllerTest {
 
     @Test
     void sendUpdates_shouldSendMessagesForEveryUpdateInBatch() {
-        LinkUpdate firstUpdate = new LinkUpdate(
-                1L,
-                "https://github.com/test-owner/test-repo",
-                "First message",
-                List.of(100L, 200L));
+        LinkUpdate firstUpdate =
+                new LinkUpdate(1L, "https://github.com/test-owner/test-repo", "First message", List.of(100L, 200L));
 
         LinkUpdate secondUpdate = new LinkUpdate(
-                2L,
-                "https://stackoverflow.com/questions/12345/how-to-write-tests",
-                "Second message",
-                List.of(300L));
+                2L, "https://stackoverflow.com/questions/12345/how-to-write-tests", "Second message", List.of(300L));
 
         controller.sendUpdates(new LinkUpdateBatch(List.of(firstUpdate, secondUpdate)));
 
@@ -53,9 +44,7 @@ class BotUpdateControllerTest {
 
     @Test
     void sendNotification_shouldSendServiceMessageToEveryChatId() {
-        ChatNotification notification = new ChatNotification(
-                "Не удалось проверить ссылку",
-                List.of(100L, 200L));
+        ChatNotification notification = new ChatNotification("Не удалось проверить ссылку", List.of(100L, 200L));
 
         controller.sendNotification(notification);
 
@@ -65,13 +54,9 @@ class BotUpdateControllerTest {
 
     @Test
     void sendNotifications_shouldSendMessagesForEveryNotificationInBatch() {
-        ChatNotification firstNotification = new ChatNotification(
-                "Ошибка GitHub",
-                List.of(100L));
+        ChatNotification firstNotification = new ChatNotification("Ошибка GitHub", List.of(100L));
 
-        ChatNotification secondNotification = new ChatNotification(
-                "Ошибка StackOverflow",
-                List.of(200L, 300L));
+        ChatNotification secondNotification = new ChatNotification("Ошибка StackOverflow", List.of(200L, 300L));
 
         controller.sendNotifications(new ChatNotificationBatch(List.of(firstNotification, secondNotification)));
 

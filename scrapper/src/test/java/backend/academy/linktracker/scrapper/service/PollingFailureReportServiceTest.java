@@ -50,8 +50,7 @@ class PollingFailureReportServiceTest {
 
         service.sendFailureReport(List.of(firstError, secondError));
 
-        ArgumentCaptor<ChatNotificationBatch> captor =
-                ArgumentCaptor.forClass(ChatNotificationBatch.class);
+        ArgumentCaptor<ChatNotificationBatch> captor = ArgumentCaptor.forClass(ChatNotificationBatch.class);
 
         verify(botClient).sendNotifications(captor.capture());
         verify(botClient, never()).sendNotification(any());
@@ -62,8 +61,7 @@ class PollingFailureReportServiceTest {
 
         Map<Long, ChatNotification> notificationsByChat = batch.notifications().stream()
                 .collect(Collectors.toMap(
-                        notification -> notification.tgChatIds().getFirst(),
-                        notification -> notification));
+                        notification -> notification.tgChatIds().getFirst(), notification -> notification));
 
         ChatNotification firstChatNotification = notificationsByChat.get(100L);
         ChatNotification secondChatNotification = notificationsByChat.get(200L);

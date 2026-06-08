@@ -39,8 +39,7 @@ public class LinkPollingService {
 
     public BatchProcessingResult pollOnce() {
         int batchSize = schedulerProperties.getBatchSize();
-        OffsetDateTime checkBefore =
-                OffsetDateTime.now(ZoneOffset.UTC).minus(schedulerProperties.getInterval());
+        OffsetDateTime checkBefore = OffsetDateTime.now(ZoneOffset.UTC).minus(schedulerProperties.getInterval());
 
         List<TrackedLink> batch = trackedLinkStorage.findNextBatchForCheck(batchSize, checkBefore);
 
@@ -70,11 +69,11 @@ public class LinkPollingService {
             }
         }
 
-        int successCount = (int) results.stream().filter(LinkProcessingResult::success).count();
+        int successCount =
+                (int) results.stream().filter(LinkProcessingResult::success).count();
         int failedCount = results.size() - successCount;
-        int updatedLinksCount = (int) results.stream()
-                .filter(LinkProcessingResult::updatesFound)
-                .count();
+        int updatedLinksCount = (int)
+                results.stream().filter(LinkProcessingResult::updatesFound).count();
 
         BatchProcessingResult result =
                 new BatchProcessingResult(results.size(), successCount, failedCount, updatedLinksCount, errors);
@@ -84,8 +83,7 @@ public class LinkPollingService {
                 result.total(),
                 result.successCount(),
                 result.failedCount(),
-                result.updatedLinksCount()
-        );
+                result.updatedLinksCount());
 
         return result;
     }
@@ -128,9 +126,7 @@ public class LinkPollingService {
     }
 
     private List<LinkProcessingResult> processChunk(List<TrackedLink> chunk) {
-        return chunk.stream()
-                .map(this::safeProcessSingleLink)
-                .toList();
+        return chunk.stream().map(this::safeProcessSingleLink).toList();
     }
 
     private List<List<TrackedLink>> splitIntoChunks(List<TrackedLink> batch, int chunkCount) {
@@ -161,14 +157,7 @@ public class LinkPollingService {
                     }
 
                     return new LinkProcessingResult(
-                            link.getId(),
-                            link.getUrl(),
-                            false,
-                            false,
-                            0,
-                            chatIds,
-                            errorMessage
-                    );
+                            link.getId(), link.getUrl(), false, false, 0, chatIds, errorMessage);
                 })
                 .toList();
     }
@@ -180,23 +169,11 @@ public class LinkPollingService {
         List<LinkEvent> events = detector.detectUpdates(trackedLink);
 
         if (events.isEmpty()) {
-            trackedLinkStorage.updateProcessingState(
-                    trackedLink.getId(),
-                    checkedAt,
-                    trackedLink.getLastUpdateTime()
-            );
+            trackedLinkStorage.updateProcessingState(trackedLink.getId(), checkedAt, trackedLink.getLastUpdateTime());
 
             log.debug("Не найдено обновлений для ссылки id={}, url={}", trackedLink.getId(), trackedLink.getUrl());
 
-            return new LinkProcessingResult(
-                    trackedLink.getId(),
-                    trackedLink.getUrl(),
-                    true,
-                    false,
-                    0,
-                    List.of(),
-                    null
-            );
+            return new LinkProcessingResult(trackedLink.getId(), trackedLink.getUrl(), true, false, 0, List.of(), null);
         }
 
         OffsetDateTime latestEventTime = events.stream()
@@ -207,53 +184,26 @@ public class LinkPollingService {
         List<Long> chatIds = trackedLinkStorage.findSubscriberChatIds(trackedLink.getId());
 
         if (chatIds.isEmpty()) {
-            trackedLinkStorage.updateProcessingState(
-                    trackedLink.getId(),
-                    checkedAt,
-                    latestEventTime
-            );
+            trackedLinkStorage.updateProcessingState(trackedLink.getId(), checkedAt, latestEventTime);
 
             log.debug(
                     "Найдены события, но нет подписчиков для ссылки id={}, url={}",
                     trackedLink.getId(),
-                    trackedLink.getUrl()
-            );
+                    trackedLink.getUrl());
 
             return new LinkProcessingResult(
-                    trackedLink.getId(),
-                    trackedLink.getUrl(),
-                    true,
-                    true,
-                    events.size(),
-                    List.of(),
-                    null
-            );
+                    trackedLink.getId(), trackedLink.getUrl(), true, true, events.size(), List.of(), null);
         }
 
         notificationService.sendUpdates(trackedLink, chatIds, events);
 
-        trackedLinkStorage.updateProcessingState(
-                trackedLink.getId(),
-                checkedAt,
-                latestEventTime
-        );
+        trackedLinkStorage.updateProcessingState(trackedLink.getId(), checkedAt, latestEventTime);
 
         log.debug(
-                "Обработана ссылка id={}, url={}, events={}",
-                trackedLink.getId(),
-                trackedLink.getUrl(),
-                events.size()
-        );
+                "Обработана ссылка id={}, url={}, events={}", trackedLink.getId(), trackedLink.getUrl(), events.size());
 
         return new LinkProcessingResult(
-                trackedLink.getId(),
-                trackedLink.getUrl(),
-                true,
-                true,
-                events.size(),
-                chatIds,
-                null
-        );
+                trackedLink.getId(), trackedLink.getUrl(), true, true, events.size(), chatIds, null);
     }
 
     private LinkProcessingResult safeProcessSingleLink(TrackedLink trackedLink) {
@@ -271,30 +221,19 @@ public class LinkPollingService {
 
             try {
                 trackedLinkStorage.updateProcessingState(
-                        trackedLink.getId(),
-                        OffsetDateTime.now(ZoneOffset.UTC),
-                        trackedLink.getLastUpdateTime()
-                );
+                        trackedLink.getId(), OffsetDateTime.now(ZoneOffset.UTC), trackedLink.getLastUpdateTime());
             } catch (Exception updateException) {
                 log.error(
                         "Не удалось обновить время проверки для ссылки id={}, url={}",
                         trackedLink.getId(),
                         trackedLink.getUrl(),
-                        updateException
-                );
+                        updateException);
             }
 
             String errorMessage = buildUserFriendlyErrorMessage(trackedLink.getUrl(), e);
 
             return new LinkProcessingResult(
-                    trackedLink.getId(),
-                    trackedLink.getUrl(),
-                    false,
-                    false,
-                    0,
-                    chatIds,
-                    errorMessage
-            );
+                    trackedLink.getId(), trackedLink.getUrl(), false, false, 0, chatIds, errorMessage);
         }
     }
 

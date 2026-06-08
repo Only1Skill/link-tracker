@@ -87,6 +87,8 @@ public class BotRestClient implements BotClient {
                 })
                 .toBodilessEntity();
 
-        log.info("Batch сервисных уведомлений отправлен в bot, count={}", batch.notifications().size());
+        log.info(
+                "Batch сервисных уведомлений отправлен в bot, count={}",
+                batch.notifications().size());
     }
 }
