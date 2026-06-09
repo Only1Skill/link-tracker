@@ -16,12 +16,16 @@ import org.springframework.validation.annotation.Validated;
 @NoArgsConstructor
 public class StackoverflowProperties {
 
-    @NotEmpty
     private String key;
 
-    @NotEmpty
     private String accessToken;
 
     @NotEmpty
     private String baseUrl;
+
+    @NotEmpty
+    private String site;
+
+    @NotEmpty
+    private String filter;
 }

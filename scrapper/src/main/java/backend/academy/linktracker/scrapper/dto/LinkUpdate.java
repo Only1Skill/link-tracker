@@ -8,4 +8,9 @@ public record LinkUpdate(
         @NotNull Long id,
         @NotNull String url,
         @NotEmpty String description,
-        @NotEmpty List<@NotNull Long> tgChatIds) {}
+        @NotEmpty List<@NotNull Long> tgChatIds) {
+
+    public LinkUpdate {
+        tgChatIds = List.copyOf(tgChatIds);
+    }
+}
