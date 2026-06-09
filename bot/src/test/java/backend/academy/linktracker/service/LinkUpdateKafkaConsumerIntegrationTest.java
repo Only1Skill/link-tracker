@@ -53,8 +53,7 @@ class LinkUpdateKafkaConsumerIntegrationTest {
     private static final String TOPIC = "link-updates-test";
 
     @Container
-    static final KafkaContainer KAFKA =
-            new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"));
+    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"));
 
     @DynamicPropertySource
     static void registerKafkaProperties(DynamicPropertyRegistry registry) {
@@ -63,12 +62,12 @@ class LinkUpdateKafkaConsumerIntegrationTest {
 
     @BeforeAll
     static void createTopic() throws Exception {
-        Map<String, Object> adminProperties = Map.of(
-                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
-                KAFKA.getBootstrapServers());
+        Map<String, Object> adminProperties =
+                Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
 
         try (AdminClient adminClient = AdminClient.create(adminProperties)) {
-            adminClient.createTopics(List.of(new NewTopic(TOPIC, 1, (short) 1)))
+            adminClient
+                    .createTopics(List.of(new NewTopic(TOPIC, 1, (short) 1)))
                     .all()
                     .get();
         }
@@ -79,11 +78,8 @@ class LinkUpdateKafkaConsumerIntegrationTest {
 
     @Test
     void shouldConsumeLinkUpdateFromKafkaAndSendTelegramMessages() {
-        LinkUpdate update = new LinkUpdate(
-                1L,
-                "https://github.com/test-owner/test-repo",
-                "New issue title",
-                List.of(100L, 200L));
+        LinkUpdate update =
+                new LinkUpdate(1L, "https://github.com/test-owner/test-repo", "New issue title", List.of(100L, 200L));
 
         KafkaTemplate<Long, LinkUpdate> kafkaTemplate = createKafkaTemplate();
 
