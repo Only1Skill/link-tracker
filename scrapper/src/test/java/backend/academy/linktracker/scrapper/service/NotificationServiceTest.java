@@ -2,19 +2,18 @@ package backend.academy.linktracker.scrapper.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import backend.academy.linktracker.scrapper.client.BotClient;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
-import backend.academy.linktracker.scrapper.dto.LinkUpdateBatch;
 import backend.academy.linktracker.scrapper.model.LinkEvent;
 import backend.academy.linktracker.scrapper.model.LinkEventType;
 import backend.academy.linktracker.scrapper.model.TrackedLink;
 import backend.academy.linktracker.scrapper.service.formatter.UpdateMessageFormatter;
+import backend.academy.linktracker.scrapper.service.sender.NotificationSender;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NotificationServiceTest {
 
     @Mock
-    private BotClient botClient;
+    private NotificationSender notificationSender;
 
     @Mock
     private UpdateMessageFormatter updateMessageFormatter;
@@ -38,11 +37,11 @@ class NotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationService(botClient, updateMessageFormatter);
+        notificationService = new NotificationService(updateMessageFormatter, notificationSender);
     }
 
     @Test
-    void sendUpdates_shouldSendOneBatchWithOneLinkUpdatePerEvent() {
+    void sendUpdates_shouldSendOneUpdatePerEventThroughNotificationSender() {
         TrackedLink trackedLink = TrackedLink.builder()
                 .id(1L)
                 .url("https://github.com/test-owner/test-repo")
@@ -63,17 +62,16 @@ class NotificationServiceTest {
 
         notificationService.sendUpdates(trackedLink, List.of(100L, 200L, 100L), List.of(firstEvent, secondEvent));
 
-        ArgumentCaptor<LinkUpdateBatch> captor = ArgumentCaptor.forClass(LinkUpdateBatch.class);
+        ArgumentCaptor<List<LinkUpdate>> captor = ArgumentCaptor.forClass(List.class);
 
-        verify(botClient).sendUpdates(captor.capture());
-        verify(botClient, never()).sendUpdate(any());
+        verify(notificationSender).sendUpdates(captor.capture());
 
-        LinkUpdateBatch batch = captor.getValue();
+        List<LinkUpdate> updates = captor.getValue();
 
-        assertThat(batch.updates()).hasSize(2);
+        assertThat(updates).hasSize(2);
 
-        LinkUpdate firstUpdate = batch.updates().get(0);
-        LinkUpdate secondUpdate = batch.updates().get(1);
+        LinkUpdate firstUpdate = updates.get(0);
+        LinkUpdate secondUpdate = updates.get(1);
 
         assertThat(firstUpdate.id()).isEqualTo(1L);
         assertThat(firstUpdate.url()).isEqualTo("https://github.com/test-owner/test-repo");
@@ -95,8 +93,7 @@ class NotificationServiceTest {
 
         notificationService.sendUpdates(trackedLink, List.of(100L), List.of());
 
-        verify(botClient, never()).sendUpdates(any());
-        verify(botClient, never()).sendUpdate(any());
+        verify(notificationSender, never()).sendUpdates(anyList());
     }
 
     @Test
@@ -113,8 +110,7 @@ class NotificationServiceTest {
 
         notificationService.sendUpdates(trackedLink, List.of(), List.of(event));
 
-        verify(botClient, never()).sendUpdates(any());
-        verify(botClient, never()).sendUpdate(any());
+        verify(notificationSender, never()).sendUpdates(anyList());
     }
 
     @Test
@@ -131,8 +127,7 @@ class NotificationServiceTest {
 
         notificationService.sendUpdates(trackedLink, Arrays.asList(null, null), List.of(event));
 
-        verify(botClient, never()).sendUpdates(any());
-        verify(botClient, never()).sendUpdate(any());
+        verify(notificationSender, never()).sendUpdates(anyList());
     }
 
     @Test
@@ -144,7 +139,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    void sendUpdates_shouldPropagateException_whenBotClientFails() {
+    void sendUpdates_shouldPropagateException_whenNotificationSenderFails() {
         TrackedLink trackedLink = TrackedLink.builder()
                 .id(1L)
                 .url("https://github.com/test-owner/test-repo")
@@ -157,7 +152,9 @@ class NotificationServiceTest {
 
         when(updateMessageFormatter.format(event)).thenReturn("message");
 
-        doThrow(new RuntimeException("bot unavailable")).when(botClient).sendUpdates(any(LinkUpdateBatch.class));
+        doThrow(new RuntimeException("transport unavailable"))
+                .when(notificationSender)
+                .sendUpdates(anyList());
 
         assertThrows(
                 RuntimeException.class,
