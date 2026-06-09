@@ -46,6 +46,7 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 @SpringBootTest(
         properties = {
+            "app.kafka.enabled=true",
             "spring.kafka.consumer.group-id=bot-link-updates-dlq-test",
             "spring.kafka.consumer.auto-offset-reset=earliest",
             "spring.kafka.consumer.key-deserializer=org.springframework.kafka.support.serializer.ErrorHandlingDeserializer",

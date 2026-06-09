@@ -31,6 +31,7 @@ app:
   scrapper:
     base-url: http://localhost:8081
   kafka:
+    enabled: ${KAFKA_ENABLED:true}
     topic:
       link-updates: link-updates
       link-updates-dlq: link-updates-dlq

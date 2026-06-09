@@ -49,6 +49,7 @@ import org.testcontainers.utility.DockerImageName;
         classes = ScrapperToBotKafkaIntegrationTest.TestBotKafkaApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
+            "app.kafka.enabled=true",
             "app.kafka.consumer.retry-attempts=0",
             "app.kafka.consumer.retry-interval=100ms",
             "app.kafka.topic.partitions=1",

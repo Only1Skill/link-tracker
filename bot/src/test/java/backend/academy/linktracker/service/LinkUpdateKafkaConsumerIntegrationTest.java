@@ -21,6 +21,7 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 @SpringBootTest(
         properties = {
+            "app.kafka.enabled=true",
             "app.kafka.topic.link-updates=link-updates-test",
             "spring.kafka.consumer.group-id=bot-link-updates-test",
             "spring.kafka.consumer.auto-offset-reset=earliest",
