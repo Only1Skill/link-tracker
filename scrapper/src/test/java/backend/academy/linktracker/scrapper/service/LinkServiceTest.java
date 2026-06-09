@@ -8,16 +8,18 @@ import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
 import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
 import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryChatStorage;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryLinkStorage;
+import backend.academy.linktracker.scrapper.repository.ChatStorage;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
+import backend.academy.linktracker.scrapper.repository.inmemory.InMemoryChatStorage;
+import backend.academy.linktracker.scrapper.repository.inmemory.InMemoryLinkStorage;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class LinkServiceTest {
-    private InMemoryLinkStorage linkStorage;
-    private InMemoryChatStorage chatStorage;
+    private LinkStorage linkStorage;
+    private ChatStorage chatStorage;
     private LinkService linkService;
 
     @BeforeEach

@@ -2,6 +2,7 @@ package backend.academy.linktracker.scrapper.exception;
 
 import backend.academy.linktracker.scrapper.dto.ApiErrorResponse;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -53,7 +54,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String message, WebRequest request) {
         ApiErrorResponse error = new ApiErrorResponse(
-                OffsetDateTime.now(),
+                OffsetDateTime.now(ZoneOffset.UTC),
                 status.value(),
                 status.getReasonPhrase(),
                 message,

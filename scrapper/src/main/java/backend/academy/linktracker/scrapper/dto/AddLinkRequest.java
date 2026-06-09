@@ -8,4 +8,9 @@ public record AddLinkRequest(
         @NotBlank(message = "Ссылка не может быть пустой") @URL(message = "Ссылка должна быть корректным URL")
         String link,
 
-        List<String> tags) {}
+        List<String> tags) {
+
+    public AddLinkRequest {
+        tags = tags == null ? List.of() : List.copyOf(tags);
+    }
+}

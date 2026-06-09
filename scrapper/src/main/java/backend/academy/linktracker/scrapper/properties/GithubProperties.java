@@ -1,5 +1,6 @@
 package backend.academy.linktracker.scrapper.properties;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,4 +21,16 @@ public class GithubProperties {
 
     @NotEmpty
     private String token;
+
+    @Min(1)
+    private int perPage;
+
+    @NotEmpty
+    private String issuesState;
+
+    @NotEmpty
+    private String issuesSort;
+
+    @NotEmpty
+    private String issuesDirection;
 }
