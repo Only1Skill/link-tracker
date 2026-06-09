@@ -6,6 +6,13 @@ spring:
     time-zone: UTC
   application:
     name: scrapper
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        spring.json.add.type.headers: false
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/scrapper}
     username: ${DB_USER:postgres}
@@ -26,9 +33,9 @@ spring:
 
 app:
   scheduler:
-      interval: 1m
-      batch-size: 100
-      parallelism: 4
+    interval: 1m
+    batch-size: 100
+    parallelism: 4
   bot:
     base-url: http://localhost:8080
   stackoverflow:
@@ -48,4 +55,11 @@ app:
     access-type: ${ACCESS_TYPE:SQL}
   notification:
     preview-length: 200
-
+    transport: ${NOTIFICATION_TRANSPORT:KAFKA}
+  kafka:
+    topic:
+      link-updates: link-updates
+      link-updates-dlq: link-updates-dlq
+      partitions: 3
+      replication-factor: 3
+      min-in-sync-replicas: 2
