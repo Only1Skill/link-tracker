@@ -20,6 +20,6 @@ public class ChatApplicationService {
         chatService.delete(chatId);
 
         linkListCache.evict(chatId);
-        log.debug("Кэш списка ссылок очищен после удаления чата, chatId={}", chatId);
+        log.debug("Кэш списка ссылок очищен после удаления чата");
     }
 }

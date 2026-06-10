@@ -19,28 +19,25 @@ public class LinkApplicationService {
         LinkResponse response = linkService.addLink(chatId, request);
 
         linkListCache.evict(chatId);
-        log.debug("Кэш списка ссылок очищен после добавления ссылки, chatId={}", chatId);
+        log.debug("Кэш списка ссылок очищен после добавления ссылки");
 
         return response;
     }
 
     public List<LinkResponse> getLinks(Long chatId, String tag) {
         if (tag != null && !tag.isBlank()) {
-            log.debug(
-                    "Кэш списка ссылок не используется, так как передан фильтр по тегу, chatId={}, tag={}",
-                    chatId,
-                    tag);
+            log.debug("Кэш списка ссылок не используется, так как передан фильтр по тегу");
             return linkService.getLinks(chatId, tag);
         }
 
         return linkListCache
                 .get(chatId)
                 .map(links -> {
-                    log.debug("Список ссылок получен из кэша, chatId={}, size={}", chatId, links.size());
+                    log.debug("Список ссылок получен из кэша");
                     return links;
                 })
                 .orElseGet(() -> {
-                    log.debug("Список ссылок отсутствует в кэше, загрузка из хранилища, chatId={}", chatId);
+                    log.debug("Список ссылок отсутствует в кэше, загрузка из хранилища");
                     return loadAndCacheLinks(chatId);
                 });
     }
@@ -49,14 +46,14 @@ public class LinkApplicationService {
         linkService.removeLink(chatId, url);
 
         linkListCache.evict(chatId);
-        log.debug("Кэш списка ссылок очищен после удаления ссылки, chatId={}", chatId);
+        log.debug("Кэш списка ссылок очищен после удаления ссылки");
     }
 
     private List<LinkResponse> loadAndCacheLinks(Long chatId) {
         List<LinkResponse> links = linkService.getLinks(chatId, null);
 
         linkListCache.put(chatId, links);
-        log.debug("Список ссылок загружен из хранилища и сохранён в кэш, chatId={}, size={}", chatId, links.size());
+        log.debug("Список ссылок загружен из хранилища и сохранён в кэш");
 
         return links;
     }
