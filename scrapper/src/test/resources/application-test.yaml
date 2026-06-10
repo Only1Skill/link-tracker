@@ -10,5 +10,9 @@ spring:
 app:
   database:
     access-type: ${ACCESS_TYPE:SQL}
+  cache:
+    links:
+      enabled: false
+      ttl: 1s
   notification:
     transport: HTTP
