@@ -1,0 +1,22 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    container_name: link-tracker-k6
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+      - ./load-tests/results:/results
+    environment:
+      BASE_URL: ${LOAD_TEST_BASE_URL:-http://host.docker.internal:8081}
+      CHAT_ID: ${LOAD_TEST_CHAT_ID:-900001}
+      LINKS_COUNT: ${LOAD_TEST_LINKS_COUNT:-20}
+      LOAD_RATE: ${LOAD_TEST_RATE:-50}
+      LOAD_DURATION: ${LOAD_TEST_DURATION:-1m}
+      PRE_ALLOCATED_VUS: ${LOAD_TEST_PRE_ALLOCATED_VUS:-20}
+      MAX_VUS: ${LOAD_TEST_MAX_VUS:-100}
+      CLEANUP_AFTER_TEST: ${LOAD_TEST_CLEANUP_AFTER_TEST:-false}
+    command:
+      - run
+      - --summary-export=/results/${LOAD_TEST_RESULT_FILE:-link-list-cache-result.json}
+      - /scripts/link-list-cache.js

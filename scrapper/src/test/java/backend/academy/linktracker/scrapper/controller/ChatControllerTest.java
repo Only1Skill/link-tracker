@@ -1,9 +1,10 @@
 package backend.academy.linktracker.scrapper.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import backend.academy.linktracker.scrapper.service.ChatService;
+import backend.academy.linktracker.scrapper.service.ChatApplicationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -16,7 +17,7 @@ class ChatControllerTest {
     MockMvc mockMvc;
 
     @MockitoBean
-    ChatService chatService;
+    ChatApplicationService chatApplicationService;
 
     @Test
     void registerChat_shouldReturn200() throws Exception {

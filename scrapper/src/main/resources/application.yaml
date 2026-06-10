@@ -30,6 +30,21 @@ spring:
   liquibase:
     change-log: classpath:migrations/db.changelog-master.yaml
     enabled: true
+  data:
+    redis:
+      client-type: lettuce
+      connect-timeout: ${VALKEY_CONNECT_TIMEOUT:2s}
+      timeout: ${VALKEY_READ_TIMEOUT:2s}
+      repositories:
+        enabled: false
+      cluster:
+        nodes: ${VALKEY_CLUSTER_NODES:localhost:7000,localhost:7001,localhost:7002}
+        max-redirects: ${VALKEY_CLUSTER_MAX_REDIRECTS:3}
+      lettuce:
+        cluster:
+          refresh:
+            adaptive: true
+            period: ${VALKEY_CLUSTER_REFRESH_PERIOD:30s}
 
 app:
   scheduler:
@@ -63,3 +78,7 @@ app:
       partitions: 3
       replication-factor: 3
       min-in-sync-replicas: 2
+  cache:
+    links:
+      enabled: ${LINK_LIST_CACHE_ENABLED:true}
+      ttl: ${LINK_LIST_CACHE_TTL:10m}

@@ -188,6 +188,530 @@ app:
 
 ---
 
+## Valkey Cache
+
+Scrapper использует Valkey для кэширования списка отслеживаемых ссылок.
+
+Кэшируется endpoint:
+
+```http
+GET /links
+Tg-Chat-Id: <chat_id>
+```
+
+Формат кэша:
+
+* ключ — значение заголовка `Tg-Chat-Id`;
+* значение — JSON-ответ endpoint `GET /links`;
+* TTL задаётся через переменную окружения `LINK_LIST_CACHE_TTL`.
+
+Запросы с фильтром по тегу не кэшируются:
+
+```http
+GET /links?tag=<tag>
+```
+
+Это сделано намеренно, так как ключ кэша равен только `Tg-Chat-Id`. Если сохранить под этим ключом отфильтрованный список, следующий обычный `GET /links` может получить неполные данные.
+
+Кэш инвалидируется после операций:
+
+* `POST /links`
+* `DELETE /links`
+* `DELETE /tg-chat/{id}`
+
+---
+
+### Конфигурация
+
+Основные переменные окружения:
+
+```env
+LINK_LIST_CACHE_ENABLED=true
+LINK_LIST_CACHE_TTL=10m
+VALKEY_CLUSTER_NODES=host.docker.internal:7000,host.docker.internal:7001,host.docker.internal:7002
+VALKEY_CONNECT_TIMEOUT=2s
+VALKEY_READ_TIMEOUT=2s
+VALKEY_CLUSTER_MAX_REDIRECTS=3
+VALKEY_CLUSTER_REFRESH_PERIOD=30s
+```
+
+Кэш можно отключить:
+
+```env
+LINK_LIST_CACHE_ENABLED=false
+```
+
+В этом случае Scrapper использует no-op реализацию кэша.
+
+---
+
+### Проверка Valkey Cluster
+
+Поднимите инфраструктуру:
+
+```powershell
+docker compose up -d
+```
+
+Проверьте создание кластера:
+
+```powershell
+docker logs link-tracker-valkey-cluster-init
+```
+
+Ожидаемый результат:
+
+```text
+[OK] All 16384 slots covered.
+```
+
+Проверьте состояние кластера:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 cluster info
+```
+
+Ожидаемый результат:
+
+```text
+cluster_state:ok
+```
+
+Проверить доступность портов с хоста:
+
+```powershell
+Test-NetConnection host.docker.internal -Port 7000
+Test-NetConnection host.docker.internal -Port 7001
+Test-NetConnection host.docker.internal -Port 7002
+```
+
+---
+
+### Ручная проверка кэша
+
+Очистите Valkey:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 FLUSHALL
+```
+
+Зарегистрируйте чат:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8081/tg-chat/123"
+```
+
+Добавьте ссылку:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8081/links" `
+  -Headers @{ "Tg-Chat-Id" = "123" } `
+  -ContentType "application/json" `
+  -Body '{"link":"https://github.com/test-owner/test-repo","tags":["java","backend"]}'
+```
+
+После `POST /links` кэш должен быть пустым, потому что список сохраняется в кэш только при `GET /links`:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 GET 123
+```
+
+Ожидаемый результат:
+
+```text
+(nil)
+```
+
+Выполните запрос списка ссылок:
+
+```powershell
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "http://localhost:8081/links" `
+  -Headers @{ "Tg-Chat-Id" = "123" }
+```
+
+После этого в Valkey должна появиться JSON-запись:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 GET 123
+```
+
+Проверьте TTL:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 TTL 123
+```
+
+Если задано `LINK_LIST_CACHE_TTL=10m`, значение TTL должно быть меньше или равно `600`.
+
+---
+
+### Проверка чтения из кэша
+
+Для наглядной проверки можно вручную подложить значение в Valkey:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 SET 123 "[{\"id\":999,\"url\":\"https://fake.example.com\",\"tags\":[\"fake\"],\"lastUpdate\":\"2026-06-10T18:00:00Z\"}]"
+```
+
+После этого обычный запрос:
+
+```powershell
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "http://localhost:8081/links" `
+  -Headers @{ "Tg-Chat-Id" = "123" }
+```
+
+должен вернуть ссылку:
+
+```text
+https://fake.example.com
+```
+
+Это означает, что Scrapper прочитал список ссылок из Valkey, а не из PostgreSQL.
+
+---
+
+### Проверка инвалидации
+
+Добавьте новую ссылку:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8081/links" `
+  -Headers @{ "Tg-Chat-Id" = "123" } `
+  -ContentType "application/json" `
+  -Body '{"link":"https://stackoverflow.com/questions/123","tags":["java"]}'
+```
+
+После добавления ссылки кэш должен быть удалён:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 GET 123
+```
+
+Ожидаемый результат:
+
+```text
+(nil)
+```
+
+Аналогично кэш очищается при удалении ссылки:
+
+```powershell
+Invoke-RestMethod `
+  -Method Delete `
+  -Uri "http://localhost:8081/links" `
+  -Headers @{ "Tg-Chat-Id" = "123" } `
+  -ContentType "application/json" `
+  -Body '{"link":"https://stackoverflow.com/questions/123"}'
+```
+
+и при удалении чата:
+
+```powershell
+Invoke-RestMethod `
+  -Method Delete `
+  -Uri "http://localhost:8081/tg-chat/123"
+```
+
+---
+
+## Нагрузочное тестирование
+
+Для проверки эффекта от Valkey Cache используется нагрузочное тестирование с помощью `k6`.
+
+Тестируемый endpoint:
+
+```http
+GET /links
+Tg-Chat-Id: <chat_id>
+```
+
+Цель тестирования — сравнить поведение `Scrapper` в двух режимах:
+
+* без кэша: `LINK_LIST_CACHE_ENABLED=false`;
+* с Valkey Cache: `LINK_LIST_CACHE_ENABLED=true`.
+
+В обоих режимах используется один и тот же сценарий нагрузки. Это позволяет сравнить задержку ответа и количество ошибок при одинаковой интенсивности запросов.
+
+---
+
+### Структура файлов
+
+Файлы нагрузочного тестирования находятся в директории:
+
+```text
+load-tests
+```
+
+Структура:
+
+```text
+load-tests
+├── k6
+│   └── link-list-cache.js
+└── results
+    └── .gitkeep
+```
+
+Назначение файлов:
+
+* `load-tests/k6/link-list-cache.js` — сценарий нагрузочного тестирования;
+* `load-tests/results` — директория для результатов запусков;
+* `.gitkeep` — пустой файл, который нужен, чтобы Git сохранил пустую директорию `results`.
+
+Git не хранит пустые директории. Поэтому `.gitkeep` используется как техническая заглушка.
+
+---
+
+### Сценарий тестирования
+
+Сценарий `link-list-cache.js` выполняет следующие действия:
+
+1. Регистрирует тестовый Telegram-чат.
+2. Добавляет заданное количество ссылок.
+3. Выполняет прогревочный запрос `GET /links`.
+4. Запускает нагрузку на `GET /links`.
+5. Проверяет, что endpoint возвращает статус `200`.
+6. Проверяет, что ответ содержит ожидаемый список ссылок.
+7. Сохраняет summary-результат в директорию `load-tests/results`.
+
+Прогревочный запрос нужен потому, что кэш списка ссылок наполняется именно при первом вызове:
+
+```http
+GET /links
+```
+
+После этого повторные запросы могут обслуживаться из Valkey.
+
+---
+
+### Docker Compose для k6
+
+Для запуска нагрузочных тестов используется отдельный compose-файл:
+
+```text
+docker-compose.load-tests.yml
+```
+
+Он запускает контейнер `grafana/k6` и монтирует директории со сценариями и результатами.
+
+Пример сервиса:
+
+```yaml
+services:
+  k6:
+    image: grafana/k6:latest
+    container_name: link-tracker-k6
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+      - ./load-tests/results:/results
+    environment:
+      BASE_URL: ${LOAD_TEST_BASE_URL:-http://host.docker.internal:8081}
+      CHAT_ID: ${LOAD_TEST_CHAT_ID:-900001}
+      LINKS_COUNT: ${LOAD_TEST_LINKS_COUNT:-20}
+      LOAD_RATE: ${LOAD_TEST_RATE:-50}
+      LOAD_DURATION: ${LOAD_TEST_DURATION:-1m}
+      PRE_ALLOCATED_VUS: ${LOAD_TEST_PRE_ALLOCATED_VUS:-20}
+      MAX_VUS: ${LOAD_TEST_MAX_VUS:-100}
+      CLEANUP_AFTER_TEST: ${LOAD_TEST_CLEANUP_AFTER_TEST:-false}
+    command:
+      - run
+      - --summary-export=/results/${LOAD_TEST_RESULT_FILE:-link-list-cache-result.json}
+      - /scripts/link-list-cache.js
+```
+
+`host.docker.internal` используется, потому что `k6` запускается внутри Docker-контейнера, а `Scrapper` обычно запускается локально из IDE или через Maven.
+
+---
+
+### Запуск теста без кэша
+
+Сначала нужно запустить `Scrapper` с отключённым кэшем:
+
+```env
+LINK_LIST_CACHE_ENABLED=false
+```
+
+После запуска приложения выполните нагрузочный тест:
+
+```powershell
+$env:LOAD_TEST_BASE_URL="http://host.docker.internal:8081"
+$env:LOAD_TEST_CHAT_ID="910001"
+$env:LOAD_TEST_LINKS_COUNT="20"
+$env:LOAD_TEST_RATE="50"
+$env:LOAD_TEST_DURATION="1m"
+$env:LOAD_TEST_PRE_ALLOCATED_VUS="20"
+$env:LOAD_TEST_MAX_VUS="100"
+$env:LOAD_TEST_RESULT_FILE="link-list-cache-disabled.json"
+
+docker compose -f docker-compose.load-tests.yml run --rm k6
+```
+
+Результат будет сохранён в файл:
+
+```text
+load-tests/results/link-list-cache-disabled.json
+```
+
+---
+
+### Запуск теста с Valkey Cache
+
+Перед запуском нужно убедиться, что Valkey Cluster поднят:
+
+```powershell
+docker compose up -d
+```
+
+Проверить состояние кластера:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 cluster info
+```
+
+Ожидаемый результат:
+
+```text
+cluster_state:ok
+```
+
+Затем нужно запустить `Scrapper` с включённым кэшем:
+
+```env
+SERVER_ADDRESS=0.0.0.0
+SERVER_PORT=8081
+LINK_LIST_CACHE_ENABLED=true
+LINK_LIST_CACHE_TTL=10m
+VALKEY_CLUSTER_NODES=host.docker.internal:7000,host.docker.internal:7001,host.docker.internal:7002
+```
+
+Перед тестом можно очистить Valkey:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 FLUSHALL
+```
+
+После запуска приложения выполните нагрузочный тест:
+
+```powershell
+$env:LOAD_TEST_BASE_URL="http://host.docker.internal:8081"
+$env:LOAD_TEST_CHAT_ID="920001"
+$env:LOAD_TEST_LINKS_COUNT="20"
+$env:LOAD_TEST_RATE="50"
+$env:LOAD_TEST_DURATION="1m"
+$env:LOAD_TEST_PRE_ALLOCATED_VUS="20"
+$env:LOAD_TEST_MAX_VUS="100"
+$env:LOAD_TEST_RESULT_FILE="link-list-cache-enabled.json"
+
+docker compose -f docker-compose.load-tests.yml run --rm k6
+```
+
+Результат будет сохранён в файл:
+
+```text
+load-tests/results/link-list-cache-enabled.json
+```
+
+---
+
+### Проверка, что кэш использовался
+
+После запуска теста с включённым кэшем можно проверить значение в Valkey:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 GET 920001
+```
+
+Ожидается JSON со списком ссылок.
+
+Также можно проверить TTL:
+
+```powershell
+docker exec -it link-tracker-valkey-1 valkey-cli -c -p 7000 TTL 920001
+```
+
+Если задано:
+
+```env
+LINK_LIST_CACHE_TTL=10m
+```
+
+то TTL должен быть меньше или равен `600`.
+
+---
+
+### Основные параметры нагрузки
+
+|          Переменная           |                      Описание                      |               Пример               |
+|-------------------------------|----------------------------------------------------|------------------------------------|
+| `LOAD_TEST_BASE_URL`          | URL запущенного Scrapper                           | `http://host.docker.internal:8081` |
+| `LOAD_TEST_CHAT_ID`           | ID тестового чата                                  | `920001`                           |
+| `LOAD_TEST_LINKS_COUNT`       | Количество ссылок, добавляемых перед тестом        | `20`                               |
+| `LOAD_TEST_RATE`              | Количество запросов в секунду                      | `50`                               |
+| `LOAD_TEST_DURATION`          | Длительность теста                                 | `1m`                               |
+| `LOAD_TEST_PRE_ALLOCATED_VUS` | Предварительно выделенные виртуальные пользователи | `20`                               |
+| `LOAD_TEST_MAX_VUS`           | Максимальное количество виртуальных пользователей  | `100`                              |
+| `LOAD_TEST_RESULT_FILE`       | Имя файла с результатом                            | `link-list-cache-enabled.json`     |
+
+---
+
+### Метрики k6
+
+В выводе `k6` используются следующие основные метрики:
+
+|        Метрика        |                   Значение                   |
+|-----------------------|----------------------------------------------|
+| `http_req_duration`   | Время выполнения HTTP-запросов               |
+| `http_req_failed`     | Доля неуспешных HTTP-запросов                |
+| `http_reqs`           | Общее количество HTTP-запросов               |
+| `checks`              | Доля успешно пройденных проверок             |
+| `get_links_duration`  | Время выполнения именно `GET /links`         |
+| `get_links_status_ok` | Доля ответов `GET /links` со статусом `200`  |
+| `get_links_body_ok`   | Доля ответов `GET /links` с корректным телом |
+
+Для сравнения важнее всего смотреть:
+
+* `avg` — среднее время ответа;
+* `p(95)` — 95% запросов были быстрее этого значения;
+* `max` — самый медленный запрос;
+* `http_req_failed` — процент ошибок;
+* `checks` — процент успешных проверок.
+
+---
+
+### Результаты нагрузочного тестирования
+
+Сценарий:
+
+* endpoint: `GET /links`;
+* количество ссылок у тестового чата: `20`;
+* нагрузка: `50 req/s`;
+* длительность: `1m`;
+* инструмент: `k6`;
+* режим нагрузки: `constant-arrival-rate`.
+
+|     Режим      | avg latency | p95 latency | max latency | failed requests | http reqs |
+|----------------|------------:|------------:|------------:|----------------:|----------:|
+| Без кэша       |         6.8 |        15.7 |       130.3 |           0.007 |      3023 |
+| С Valkey Cache |         4.4 |         9.5 |       131.9 |               0 |      3022 |
+
+Вывод:
+
+При включённом Valkey Cache повторные запросы `GET /links` обслуживаются из кэша. Это снижает количество обращений к PostgreSQL и уменьшает задержку ответа для сценария частого чтения списка ссылок.
+
+---
+
 ## Retry и DLQ
 
 Bot consumer обрабатывает сообщения из `link-updates`.
