@@ -4,7 +4,6 @@ import backend.academy.linktracker.scrapper.cache.LinkListCache;
 import backend.academy.linktracker.scrapper.dto.AddLinkRequest;
 import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,17 +33,16 @@ public class LinkApplicationService {
             return linkService.getLinks(chatId, tag);
         }
 
-        Optional<List<LinkResponse>> cachedLinks = linkListCache.get(chatId);
-        if (cachedLinks.isPresent()) {
-            log.debug(
-                    "Список ссылок получен из кэша, chatId={}, size={}",
-                    chatId,
-                    cachedLinks.get().size());
-            return cachedLinks.get();
-        }
-
-        log.debug("Список ссылок отсутствует в кэше, загрузка из хранилища, chatId={}", chatId);
-        return loadAndCacheLinks(chatId);
+        return linkListCache
+                .get(chatId)
+                .map(links -> {
+                    log.debug("Список ссылок получен из кэша, chatId={}, size={}", chatId, links.size());
+                    return links;
+                })
+                .orElseGet(() -> {
+                    log.debug("Список ссылок отсутствует в кэше, загрузка из хранилища, chatId={}", chatId);
+                    return loadAndCacheLinks(chatId);
+                });
     }
 
     public void removeLink(Long chatId, String url) {
