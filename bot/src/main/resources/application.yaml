@@ -41,3 +41,21 @@ app:
     consumer:
       retry-attempts: 3
       retry-interval: 1s
+  resilience:
+    timeout:
+      connect-timeout: ${HTTP_CONNECT_TIMEOUT:1s}
+      read-timeout: ${HTTP_READ_TIMEOUT:2s}
+    retry:
+      max-attempts: ${HTTP_RETRY_MAX_ATTEMPTS:3}
+      wait-duration: ${HTTP_RETRY_WAIT_DURATION:200ms}
+      retryable-statuses: ${HTTP_RETRYABLE_STATUSES:500,502,503,504}
+    circuit-breaker:
+      sliding-window-size: ${HTTP_CB_SLIDING_WINDOW_SIZE:10}
+      minimum-number-of-calls: ${HTTP_CB_MINIMUM_NUMBER_OF_CALLS:5}
+      failure-rate-threshold: ${HTTP_CB_FAILURE_RATE_THRESHOLD:100}
+      permitted-number-of-calls-in-half-open-state: ${HTTP_CB_HALF_OPEN_CALLS:5}
+      wait-duration-in-open-state: ${HTTP_CB_WAIT_DURATION_IN_OPEN_STATE:1s}
+  rate-limiting:
+    enabled: ${RATE_LIMITING_ENABLED:true}
+    limit-for-period: ${RATE_LIMIT_FOR_PERIOD:60}
+    limit-refresh-period: ${RATE_LIMIT_REFRESH_PERIOD:1m}

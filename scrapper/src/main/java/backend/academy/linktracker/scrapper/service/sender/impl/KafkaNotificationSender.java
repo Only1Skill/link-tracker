@@ -5,13 +5,13 @@ import backend.academy.linktracker.scrapper.properties.KafkaTopicProperties;
 import backend.academy.linktracker.scrapper.service.sender.NotificationSender;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.notification.transport", havingValue = "KAFKA", matchIfMissing = true)
+@Slf4j
 public class KafkaNotificationSender implements NotificationSender {
 
     private final KafkaTemplate<Long, LinkUpdate> kafkaTemplate;
@@ -24,7 +24,13 @@ public class KafkaNotificationSender implements NotificationSender {
         }
 
         for (LinkUpdate update : updates) {
-            kafkaTemplate.send(topicProperties.getLinkUpdates(), update.id(), update);
+            kafkaTemplate
+                    .send(topicProperties.getLinkUpdates(), update.id(), update)
+                    .whenComplete((_, exception) -> {
+                        if (exception != null) {
+                            log.error("Не удалось отправить update в Kafka, linkId={}", update.id(), exception);
+                        }
+                    });
         }
     }
 }
