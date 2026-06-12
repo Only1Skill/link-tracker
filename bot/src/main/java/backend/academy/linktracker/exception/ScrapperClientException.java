@@ -21,5 +21,4 @@ public class ScrapperClientException extends RuntimeException {
         super(message);
         this.statusCode = statusCode;
     }
-
 }

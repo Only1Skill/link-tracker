@@ -38,7 +38,10 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain)
+    protected void doFilterInternal(
+            @NotNull HttpServletRequest request,
+            @NotNull HttpServletResponse response,
+            @NotNull FilterChain filterChain)
             throws ServletException, IOException {
         String clientIp = clientIp(request);
         RateLimiter limiter = limitersByIp.computeIfAbsent(clientIp, ip -> RateLimiter.of(ip, rateLimiterConfig));
