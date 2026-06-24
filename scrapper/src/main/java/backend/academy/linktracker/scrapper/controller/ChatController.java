@@ -1,6 +1,6 @@
 package backend.academy.linktracker.scrapper.controller;
 
-import backend.academy.linktracker.scrapper.service.ChatService;
+import backend.academy.linktracker.scrapper.service.ChatApplicationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,17 +16,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class ChatController {
-    private final ChatService chatService;
+    private final ChatApplicationService chatApplicationService;
 
     @PostMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public void registerChat(@PathVariable Long id) {
-        chatService.register(id);
+        chatApplicationService.register(id);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public void deleteChat(@PathVariable Long id) {
-        chatService.delete(id);
+        chatApplicationService.delete(id);
     }
 }

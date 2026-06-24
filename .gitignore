@@ -56,3 +56,7 @@ build/
 .env
 bot/.env
 **/.env
+
+# Load test results
+load-tests/results/*
+!load-tests/results/.gitkeep
