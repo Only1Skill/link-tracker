@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scrapper
+    username: postgres
+    password: Leonid2005
+  liquibase:
+    enabled: true
+
+app:
+  database:
+    access-type: SQL

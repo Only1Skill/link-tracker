@@ -1,0 +1,12 @@
+spring:
+  jackson:
+    time-zone: UTC
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    enabled: true
+
+app:
+  database:
+    access-type: ${ACCESS_TYPE:SQL}

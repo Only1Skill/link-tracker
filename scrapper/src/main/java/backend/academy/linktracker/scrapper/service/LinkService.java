@@ -5,26 +5,28 @@ import backend.academy.linktracker.scrapper.dto.LinkResponse;
 import backend.academy.linktracker.scrapper.exception.ChatNotFoundException;
 import backend.academy.linktracker.scrapper.exception.LinkDuplicateException;
 import backend.academy.linktracker.scrapper.exception.LinkNotFoundException;
-import backend.academy.linktracker.scrapper.model.Link;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryChatStorage;
-import backend.academy.linktracker.scrapper.repository.impl.InMemoryLinkStorage;
+import backend.academy.linktracker.scrapper.model.SubscriptionLinkView;
+import backend.academy.linktracker.scrapper.repository.ChatStorage;
+import backend.academy.linktracker.scrapper.repository.LinkStorage;
 import backend.academy.linktracker.scrapper.util.LogSanitizer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class LinkService {
-
-    private final InMemoryLinkStorage inMemoryLinkStorage;
-    private final InMemoryChatStorage inMemoryChatStorage;
+    private final LinkStorage linkStorage;
+    private final ChatStorage chatStorage;
 
     /**
      * Добавить ссылку для указанного чата.
@@ -37,22 +39,22 @@ public class LinkService {
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public LinkResponse addLink(Long chatId, AddLinkRequest request) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
-        if (inMemoryLinkStorage.findByChatIdAndUrl(chatId, request.link()).isPresent()) {
+        if (linkStorage.findByChatIdAndUrl(chatId, request.link()).isPresent()) {
             throw new LinkDuplicateException(request.link());
         }
 
-        Link link = Link.builder()
+        SubscriptionLinkView link = SubscriptionLinkView.builder()
                 .chatId(chatId)
                 .url(request.link())
                 .tags(request.tags())
-                .lastCheckTime(OffsetDateTime.now())
-                .lastUpdateTime(OffsetDateTime.now())
+                .lastCheckTime(OffsetDateTime.now(ZoneOffset.UTC))
+                .lastUpdateTime(OffsetDateTime.now(ZoneOffset.UTC))
                 .build();
 
-        Link saved = inMemoryLinkStorage.save(chatId, link);
+        SubscriptionLinkView saved = linkStorage.save(chatId, link);
 
         List<String> safeTags = saved.getTags() == null
                 ? null
@@ -70,18 +72,13 @@ public class LinkService {
      * @return список LinkResponse
      * @throws ChatNotFoundException если чат не зарегистрирован
      */
+    @Transactional(readOnly = true)
     public List<LinkResponse> getLinks(Long chatId, String tag) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        List<Link> links = inMemoryLinkStorage.findByChatId(chatId);
-        if (tag != null && !tag.isBlank()) {
-            links = links.stream()
-                    .filter(link -> link.getTags() != null && link.getTags().contains(tag))
-                    .toList();
-        }
-
+        List<SubscriptionLinkView> links = linkStorage.findByChatId(chatId, tag);
         return links.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -94,19 +91,20 @@ public class LinkService {
      * @throws LinkNotFoundException если ссылка не найдена
      */
     @SuppressFBWarnings("CRLF_INJECTION_LOGS")
+    @Transactional
     public void removeLink(Long chatId, String url) {
-        if (!inMemoryChatStorage.exists(chatId)) {
+        if (!chatStorage.exists(chatId)) {
             throw new ChatNotFoundException(chatId);
         }
 
-        Link link =
-                inMemoryLinkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
+        SubscriptionLinkView link =
+                linkStorage.findByChatIdAndUrl(chatId, url).orElseThrow(() -> new LinkNotFoundException(url));
 
-        inMemoryLinkStorage.delete(chatId, url);
+        linkStorage.delete(chatId, url);
         log.info("Removing link: {} for chat {}", LogSanitizer.sanitize(link.getUrl()), chatId);
     }
 
-    private LinkResponse mapToResponse(Link link) {
+    private LinkResponse mapToResponse(SubscriptionLinkView link) {
         return new LinkResponse(link.getId(), URI.create(link.getUrl()), link.getTags(), link.getLastUpdateTime());
     }
 }

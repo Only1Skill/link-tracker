@@ -19,7 +19,7 @@ public class ClientConfiguration {
     public GitHubClient gitHubClient(GithubProperties githubProperties) {
         RestClient restClient = RestClient.builder()
                 .baseUrl(githubProperties.getBaseUrl())
-                .defaultHeader("Accept", "application/vnd.github.v3+json")
+                .defaultHeader("Accept", "application/vnd.github+json")
                 .build();
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
         HttpServiceProxyFactory factory =

@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-chats-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 001-create-chats-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 002-create-links-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 002-create-links-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 003-create-tags-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 003-create-tags-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 004-create-link-chat-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 004-create-link-chat-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 005-create-link-tags-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 005-create-link-tags-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 006-add-indexes
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 006-add-indexes.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 007-add-indexes
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 007-add-indexes.sql
+            relativeToChangelogFile: true
+  - changeSet:
+      id: 008-create-link-chat-tag-table
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 008-create-link-chat-tag-table.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 009-migrate-old-link-tags
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 009-migrate-old-link-tags.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 010-drop-old-link-tags
+      author: leoni
+      changes:
+        - sqlFile:
+            path: 010-drop-old-link-tags.sql
+            relativeToChangelogFile: true
