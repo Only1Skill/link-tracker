@@ -4,6 +4,23 @@ server:
 spring:
   application:
     name: bot
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    consumer:
+      group-id: bot-link-updates
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.LongDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+        spring.json.value.default.type: backend.academy.linktracker.dto.LinkUpdate
+        spring.json.trusted.packages: backend.academy.linktracker.dto
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        spring.json.add.type.headers: false
 
 app:
   telegram:
@@ -13,3 +30,14 @@ app:
     debug: false
   scrapper:
     base-url: http://localhost:8081
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+    topic:
+      link-updates: link-updates
+      link-updates-dlq: link-updates-dlq
+      partitions: 3
+      replication-factor: 3
+      min-in-sync-replicas: 2
+    consumer:
+      retry-attempts: 3
+      retry-interval: 1s

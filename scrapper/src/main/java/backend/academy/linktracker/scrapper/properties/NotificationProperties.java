@@ -20,4 +20,6 @@ public class NotificationProperties {
 
     @Min(1)
     private int previewLength = DEFAULT_PREVIEW_LENGTH;
+
+    private NotificationTransport transport = NotificationTransport.KAFKA;
 }

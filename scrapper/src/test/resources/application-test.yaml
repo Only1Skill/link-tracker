@@ -10,3 +10,5 @@ spring:
 app:
   database:
     access-type: ${ACCESS_TYPE:SQL}
+  notification:
+    transport: HTTP

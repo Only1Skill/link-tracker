@@ -1,11 +1,10 @@
 package backend.academy.linktracker.scrapper.service;
 
-import backend.academy.linktracker.scrapper.client.BotClient;
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
-import backend.academy.linktracker.scrapper.dto.LinkUpdateBatch;
 import backend.academy.linktracker.scrapper.model.LinkEvent;
 import backend.academy.linktracker.scrapper.model.TrackedLink;
 import backend.academy.linktracker.scrapper.service.formatter.UpdateMessageFormatter;
+import backend.academy.linktracker.scrapper.service.sender.NotificationSender;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +15,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class NotificationService {
 
-    private final BotClient botClient;
     private final UpdateMessageFormatter updateMessageFormatter;
+    private final NotificationSender notificationSender;
 
     public void sendUpdates(TrackedLink trackedLink, List<Long> chatIds, List<LinkEvent> events) {
         if (trackedLink == null) {
@@ -35,10 +34,10 @@ public class NotificationService {
         }
 
         List<Long> normalizedChatIds =
-                chatIds.stream().filter(id -> id != null).distinct().toList();
+                chatIds.stream().filter(chatId -> chatId != null).distinct().toList();
 
         if (normalizedChatIds.isEmpty()) {
-            log.debug("Не валидный подписчик для ссылки id={}, url={}", trackedLink.getId(), trackedLink.getUrl());
+            log.debug("Нет валидных подписчиков для ссылки id={}, url={}", trackedLink.getId(), trackedLink.getUrl());
             return;
         }
 
@@ -50,12 +49,6 @@ public class NotificationService {
                         normalizedChatIds))
                 .toList();
 
-        botClient.sendUpdates(new LinkUpdateBatch(updates));
-
-        log.debug(
-                "Batch уведомлений отправлен для ссылки id={}, events={}, subscribers={}",
-                trackedLink.getId(),
-                updates.size(),
-                normalizedChatIds.size());
+        notificationSender.sendUpdates(updates);
     }
 }

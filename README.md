@@ -1,321 +1,654 @@
-# LinkTracker
+# Link Tracker
 
-**LinkTracker** — это Telegram-бот для отслеживания обновлений по ссылкам. Пользователь отправляет ссылку на GitHub-репозиторий или вопрос на Stack Overflow, а приложение периодически проверяет изменения и присылает уведомление в Telegram.
+Link Tracker — это backend-система для отслеживания обновлений по ссылкам и отправки уведомлений пользователям в Telegram.
+
+Проект состоит из двух основных сервисов:
+
+* **Bot** — Telegram-бот, который принимает команды пользователей и отправляет уведомления.
+* **Scrapper** — сервис, который хранит подписки, периодически проверяет внешние ресурсы и публикует найденные обновления.
+
+Коммуникация между `scrapper` и `bot` поддерживает два режима:
+
+* **HTTP** — синхронная отправка уведомлений через REST API.
+* **Kafka** — асинхронная отправка уведомлений через Apache Kafka. Этот режим используется по умолчанию.
+
+---
 
 ## Возможности
 
-- регистрация пользователя через Telegram-бота;
-- добавление и удаление ссылок из отслеживания;
-- фильтрация списка ссылок по тегам;
-- проверка обновлений по ссылкам по расписанию;
-- поддержка двух источников:
-  - **GitHub**
-  - **Stack Overflow**
-- отправка уведомлений в Telegram при обнаружении изменений.
+* Регистрация Telegram-чата через команду `/start`.
+* Добавление ссылок для отслеживания через `/track`.
+* Удаление ссылок через `/untrack`.
+* Просмотр отслеживаемых ссылок через `/list`.
+* Поддержка тегов и фильтров для подписок.
+* Проверка обновлений GitHub repositories.
+* Проверка обновлений Stack Overflow questions.
+* Асинхронная доставка уведомлений через Kafka.
+* Retry и DLQ для ошибочных Kafka-сообщений.
+* Поддержка двух реализаций доступа к БД:
+  * SQL/JDBC
+  * JPA/Hibernate
+* Миграции базы данных через Liquibase.
+* Интеграционные тесты с Testcontainers.
+
+---
 
 ## Архитектура
 
-Проект состоит из двух микросервисов:
+Высокоуровневая схема работы:
 
-- **bot** — Telegram-бот, который принимает команды пользователя;
-- **scrapper** — сервис, который хранит ссылки, ходит во внешние API и проверяет обновления.
-
-```mermaid
-flowchart LR
-    User[Пользователь в Telegram] --> Bot[bot :8080]
-    Bot --> Scrapper[scrapper :8081]
-    Scrapper --> GitHub[GitHub API]
-    Scrapper --> StackOverflow[Stack Overflow API]
-    Scrapper --> DB[(PostgreSQL)]
-    Scrapper -->|POST /updates| Bot
-    Bot --> User
+```text
+Telegram User
+     |
+     v
++---------+
+|   Bot   |
++---------+
+     |
+     | REST API: регистрация чата, подписки, команды
+     v
++------------+
+|  Scrapper  |
++------------+
+     |
+     | polling GitHub / Stack Overflow
+     v
+External APIs
 ```
 
-## Технологии
+При обнаружении обновлений `scrapper` отправляет уведомление в `bot`.
 
-- **Java 25**
-- **Spring Boot 4**
-- **Spring Web MVC**
-- **Spring RestClient**
-- **Spring Data JPA / JDBC**
-- **Liquibase**
-- **PostgreSQL**
-- **Docker / Docker Compose**
-- **OpenAPI / Swagger UI**
-- **JUnit 5, Testcontainers, WireMock**
+В Kafka-режиме цепочка выглядит так:
 
-## Поддерживаемые команды бота
+```text
+Scrapper
+   |
+   | LinkUpdate JSON
+   v
+Kafka topic: link-updates
+   |
+   v
+Bot Kafka Consumer
+   |
+   v
+Telegram message
+```
 
-- `/start` — регистрация пользователя
-- `/help` — список команд
-- `/track` — добавить ссылку в отслеживание
-- `/list` — показать все отслеживаемые ссылки
-- `/list <tag>` — показать ссылки по тегу
-- `/untrack` — удалить ссылку из отслеживания
-- `/cancel` — отменить текущий диалог
+Если сообщение невозможно обработать, оно попадает в DLQ:
 
-## Что нужно для запуска
+```text
+link-updates-dlq
+```
 
-Перед стартом убедитесь, что у вас установлены:
+---
 
-- **JDK 25**
-- **Docker** и **Docker Compose**
-- **Maven Wrapper** уже лежит в репозитории (`./mvnw`)
-- Telegram bot token
-- GitHub token
-- Stack Overflow API key и access token
+## Модули проекта
 
-> В текущей реализации `scrapper` валидирует настройки GitHub и Stack Overflow на старте, поэтому переменные для обоих API должны быть заполнены.
+```text
+.
+├── bot                 # Telegram Bot service
+├── scrapper            # Link polling and subscription service
+├── ai-agent            # Дополнительный модуль проекта
+├── e2e-tests           # Сквозные интеграционные тесты
+├── migrations          # Liquibase migrations
+├── docker-compose.yml  # Локальная инфраструктура
+└── pom.xml             # Root Maven project
+```
+
+---
+
+## Технологический стек
+
+* Java 25
+* Spring Boot 4
+* Spring Web MVC
+* Spring Kafka
+* Spring Data JDBC
+* Spring Data JPA
+* Hibernate
+* PostgreSQL
+* Liquibase
+* Apache Kafka
+* Zookeeper
+* Testcontainers
+* JUnit 6
+* Mockito
+* Maven
+
+---
+
+## База данных
+
+Основные сущности:
+
+* `chats` — Telegram-чаты.
+* `links` — глобальный справочник ссылок.
+* `link_chat` — подписки чатов на ссылки.
+* `tags` — справочник тегов.
+* `link_chat_tag` — связь тегов с конкретной подпиской.
+
+Важная особенность модели: тег относится не к глобальной ссылке, а к конкретной подписке пользователя.
+
+То есть одна и та же ссылка может быть добавлена разными пользователями с разными тегами.
+
+---
+
+## Kafka
+
+Kafka используется как асинхронный транспорт уведомлений между `scrapper` и `bot`.
+
+Основные topics:
+
+|       Topic        |                           Назначение                           |
+|--------------------|----------------------------------------------------------------|
+| `link-updates`     | Основной topic для уведомлений                                 |
+| `link-updates-dlq` | Dead Letter Queue для сообщений, которые не удалось обработать |
+
+Сообщения передаются в JSON-формате.
+
+Пример сообщения:
+
+```json
+{
+  "id": 1,
+  "url": "https://github.com/spring-projects/spring-kafka",
+  "description": "Обнаружено новое обновление",
+  "tgChatIds": [123456789]
+}
+```
+
+Kafka topics создаются декларативно через Spring Kafka `KafkaAdmin` и `NewTopic` beans.
+Auto-create topics в Kafka отключён, чтобы случайные topics не создавались из-за опечаток.
+
+Для локального окружения используется Kafka-кластер из трёх брокеров.
+
+Настройки topics:
+
+```yaml
+app:
+  kafka:
+    topic:
+      link-updates: link-updates
+      link-updates-dlq: link-updates-dlq
+      partitions: 3
+      replication-factor: 3
+      min-in-sync-replicas: 2
+```
+
+Для Testcontainers используется single-broker Kafka, поэтому в тестах задаются значения:
+
+```yaml
+app:
+  kafka:
+    topic:
+      partitions: 1
+      replication-factor: 1
+      min-in-sync-replicas: 1
+```
+
+---
+
+## Retry и DLQ
+
+Bot consumer обрабатывает сообщения из `link-updates`.
+
+Если во время обработки возникает бизнес-ошибка, например Telegram API временно недоступен, consumer повторяет обработку заданное количество раз.
+
+После исчерпания retry сообщение отправляется в:
+
+```text
+link-updates-dlq
+```
+
+Ошибки десериализации и валидации отправляются в DLQ сразу, без retry.
+
+Конфигурация:
+
+```yaml
+app:
+  kafka:
+    consumer:
+      retry-attempts: 3
+      retry-interval: 1s
+```
+
+---
+
+## Локальный запуск
+
+### Требования
+
+Перед запуском должны быть установлены:
+
+* JDK 25
+* Docker Desktop
+* Maven или Maven Wrapper
+
+---
 
 ## Переменные окружения
 
-### Для `bot`
+Создайте `.env` файл в корне проекта.
 
-| Переменная | Описание |
-|---|---|
-| `TELEGRAM_TOKEN` | токен Telegram-бота |
+Пример:
 
-### Для `scrapper`
+```env
+POSTGRES_DB=scrapper
+DB_USER=postgres
+DB_PASSWORD=postgres
 
-| Переменная | Описание |
-|---|---|
-| `DB_URL` | JDBC URL базы данных |
-| `DB_USER` | пользователь PostgreSQL |
-| `DB_PASSWORD` | пароль PostgreSQL |
-| `GITHUB_TOKEN` | токен GitHub API |
-| `STACKOVERFLOW_KEY` | ключ приложения Stack Overflow |
-| `STACKOVERFLOW_ACCESS_KEY` | access token Stack Overflow |
-| `ACCESS_TYPE` | тип доступа к данным: `SQL`, `ORM`, `IN_MEMORY` |
+TELEGRAM_TOKEN=your_telegram_bot_token
 
-Рекомендуемое значение для локального запуска:
+GITHUB_TOKEN=your_github_token
 
-```bash
-export DB_URL=jdbc:postgresql://localhost:5432/scrapper
-export DB_USER=postgres
-export DB_PASSWORD=postgres
-export GITHUB_TOKEN=your_github_token
-export STACKOVERFLOW_KEY=your_stackoverflow_key
-export STACKOVERFLOW_ACCESS_KEY=your_stackoverflow_access_token
-export ACCESS_TYPE=ORM
-export TELEGRAM_TOKEN=your_telegram_bot_token
+STACKOVERFLOW_KEY=test
+STACKOVERFLOW_ACCESS_KEY=test
+
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092,localhost:9093,localhost:9094
+NOTIFICATION_TRANSPORT=KAFKA
+ACCESS_TYPE=SQL
 ```
 
-> Если запускаете проект из IDE, эти же переменные можно добавить в конфигурации запуска для модулей `bot` и `scrapper`.
+---
 
-## Запуск PostgreSQL
+## Запуск инфраструктуры
 
-В репозитории уже есть `docker-compose.yml`, но для корректного старта PostgreSQL значение `POSTGRES_DB` должно быть **именем базы**, а не JDBC URL.
-
-Рабочий вариант `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15
-    container_name: scrapper-db
-    environment:
-      POSTGRES_DB: scrapper
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+```powershell
+docker compose up -d
 ```
 
-Запуск базы данных:
+После запуска будут доступны:
 
-```bash
-docker compose up -d postgres
+|     Сервис     |       URL / Port        |
+|----------------|-------------------------|
+| PostgreSQL     | `localhost:5432`        |
+| Kafka broker 1 | `localhost:9092`        |
+| Kafka broker 2 | `localhost:9093`        |
+| Kafka broker 3 | `localhost:9094`        |
+| Kafka UI       | `http://localhost:8090` |
+
+Проверить Kafka topics:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-topics `
+  --bootstrap-server kafka-1:29092 `
+  --list
+```
+
+Ожидаемый результат после старта приложения:
+
+```text
+link-updates
+link-updates-dlq
+```
+
+---
+
+## Запуск Bot
+
+PowerShell:
+
+```powershell
+$env:KAFKA_BOOTSTRAP_SERVERS="localhost:9092,localhost:9093,localhost:9094"
+$env:TELEGRAM_TOKEN="your_telegram_bot_token"
+
+.\mvnw.cmd -pl bot spring-boot:run
+```
+
+Ожидаемые признаки успешного запуска:
+
+```text
+Started BotApplication
+Subscribed to topic(s): link-updates
+partitions assigned: [link-updates-0, link-updates-1, link-updates-2]
+```
+
+---
+
+## Запуск Scrapper
+
+PowerShell:
+
+```powershell
+$env:KAFKA_BOOTSTRAP_SERVERS="localhost:9092,localhost:9093,localhost:9094"
+$env:NOTIFICATION_TRANSPORT="KAFKA"
+$env:DB_URL="jdbc:postgresql://localhost:5432/scrapper"
+$env:DB_USER="postgres"
+$env:DB_PASSWORD="postgres"
+$env:GITHUB_TOKEN="your_github_token"
+$env:STACKOVERFLOW_KEY="test"
+$env:STACKOVERFLOW_ACCESS_KEY="test"
+$env:ACCESS_TYPE="SQL"
+
+.\mvnw.cmd -pl scrapper spring-boot:run
+```
+
+---
+
+## Проверка Kafka вручную
+
+### Проверка успешного сообщения
+
+Откройте producer:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-console-producer `
+  --bootstrap-server kafka-1:29092 `
+  --topic link-updates
+```
+
+Отправьте сообщение, заменив `123456789` на реальный Telegram chat id:
+
+```json
+{"id":1,"url":"https://github.com/test-owner/test-repo","description":"Kafka работает: сообщение пришло через topic link-updates","tgChatIds":[123456789]}
+```
+
+Если `bot` запущен, пользователь получит сообщение в Telegram.
+
+---
+
+### Проверка DLQ
+
+Отправьте невалидное сообщение с пустым `description`:
+
+```json
+{"id":2,"url":"https://github.com/test-owner/test-repo","description":"","tgChatIds":[123456789]}
+```
+
+Проверьте DLQ:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-console-consumer `
+  --bootstrap-server kafka-1:29092 `
+  --topic link-updates-dlq `
+  --from-beginning
+```
+
+Сообщение должно появиться в `link-updates-dlq`.
+
+---
+
+## Проверка consumer group
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-consumer-groups `
+  --bootstrap-server kafka-1:29092 `
+  --describe `
+  --group bot-link-updates
+```
+
+Если `LAG = 0`, значит `bot` прочитал все сообщения из Kafka.
+
+---
+
+## Работа с Telegram Bot
+
+Основные команды:
+
+|  Команда   |               Описание               |
+|------------|--------------------------------------|
+| `/start`   | Зарегистрировать чат                 |
+| `/help`    | Показать список команд               |
+| `/track`   | Начать отслеживание ссылки           |
+| `/untrack` | Прекратить отслеживание ссылки       |
+| `/list`    | Показать список отслеживаемых ссылок |
+
+Пример сценария:
+
+```text
+/start
+/track https://github.com/spring-projects/spring-kafka
+/list
+/untrack https://github.com/spring-projects/spring-kafka
+```
+
+---
+
+## Режимы отправки уведомлений
+
+По умолчанию используется Kafka:
+
+```env
+NOTIFICATION_TRANSPORT=KAFKA
+```
+
+Для переключения на HTTP:
+
+```env
+NOTIFICATION_TRANSPORT=HTTP
+```
+
+HTTP-режим полезен для локальной отладки и совместимости со старыми тестами.
+
+---
+
+## Режимы доступа к базе данных
+
+Scrapper поддерживает несколько реализаций storage layer.
+
+Пример выбора SQL/JDBC:
+
+```env
+ACCESS_TYPE=SQL
+```
+
+Пример выбора ORM/JPA:
+
+```env
+ACCESS_TYPE=ORM
+```
+
+---
+
+## Тесты
+
+Запуск всех тестов:
+
+```powershell
+.\mvnw.cmd test
+```
+
+Запуск тестов Bot:
+
+```powershell
+.\mvnw.cmd -pl bot test
+```
+
+Запуск тестов Scrapper:
+
+```powershell
+.\mvnw.cmd -pl scrapper test
+```
+
+Запуск Kafka producer integration test:
+
+```powershell
+.\mvnw.cmd -pl scrapper -Dtest=KafkaNotificationSenderIntegrationTest test
+```
+
+Запуск Kafka consumer tests:
+
+```powershell
+.\mvnw.cmd -pl bot -Dtest=LinkUpdateKafkaConsumerIntegrationTest,LinkUpdateKafkaConsumerDlqIntegrationTest test
+```
+
+Запуск сквозного E2E-теста:
+
+```powershell
+.\mvnw.cmd -pl e2e-tests -am -Dtest=ScrapperToBotKafkaIntegrationTest test
+```
+
+E2E-тест проверяет цепочку:
+
+```text
+Scrapper KafkaNotificationSender
+        |
+        v
+Kafka topic link-updates
+        |
+        v
+Bot Kafka consumer
+        |
+        v
+TelegramClient.sendMessage(...)
+```
+
+---
+
+## Форматирование кода
+
+Перед коммитом рекомендуется выполнить:
+
+```powershell
+.\mvnw.cmd spotless:apply
 ```
 
 Проверка:
 
-```bash
-docker ps
+```powershell
+.\mvnw.cmd spotless:check
 ```
 
-## Порядок запуска приложения
+---
 
-### 1. Клонировать репозиторий
+## Liquibase
 
-```bash
-git clone https://github.com/Only1Skill/link-tracker.git
-cd link-tracker
-```
-
-### 2. Поднять PostgreSQL
-
-```bash
-docker compose up -d postgres
-```
-
-### 3. Экспортировать переменные окружения
-
-```bash
-export DB_URL=jdbc:postgresql://localhost:5432/scrapper
-export DB_USER=postgres
-export DB_PASSWORD=postgres
-export GITHUB_TOKEN=your_github_token
-export STACKOVERFLOW_KEY=your_stackoverflow_key
-export STACKOVERFLOW_ACCESS_KEY=your_stackoverflow_access_token
-export ACCESS_TYPE=ORM
-export TELEGRAM_TOKEN=your_telegram_bot_token
-```
-
-### 4. Запустить `scrapper`
-
-В первом терминале:
-
-```bash
-./mvnw -pl scrapper spring-boot:run
-```
-
-Сервис стартует на:
+Миграции находятся в директории:
 
 ```text
-http://localhost:8081
+migrations
 ```
 
-### 5. Запустить `bot`
-
-Во втором терминале:
-
-```bash
-./mvnw -pl bot spring-boot:run
-```
-
-Сервис стартует на:
+Основной changelog:
 
 ```text
-http://localhost:8080
+migrations/db.changelog-master.yaml
 ```
 
-## Что происходит при запуске
+В приложении используется classpath-путь:
 
-- `scrapper` подключается к PostgreSQL;
-- Liquibase автоматически применяет миграции из `scrapper/migrations`;
-- `bot` начинает polling Telegram Bot API;
-- `scrapper` по расписанию проверяет обновления ссылок;
-- при изменении ссылки `scrapper` отправляет событие в `bot`, а бот уведомляет пользователя в Telegram.
+```yaml
+spring:
+  liquibase:
+    change-log: classpath:migrations/db.changelog-master.yaml
+```
 
-## Миграции базы данных
+---
 
-Liquibase запускается автоматически при старте `scrapper`.
+## Docker Compose
 
-Создаются таблицы:
+`docker-compose.yml` поднимает:
 
-- `chats`
-- `links`
-- `tags`
-- `link_chat`
-- `link_tags`
+* PostgreSQL
+* Zookeeper
+* Kafka broker 1
+* Kafka broker 2
+* Kafka broker 3
+* Kafka UI
 
-Также создаются индексы для ускорения поиска и проверки обновлений.
+Kafka настроена с отключённым auto-create topics:
 
-## Swagger / OpenAPI
+```yaml
+KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+```
 
-После запуска документация доступна по адресам:
+Topics создаются приложением через `KafkaAdmin`.
 
-- `bot` — `http://localhost:8080/swagger-ui/index.html`
-- `scrapper` — `http://localhost:8081/swagger-ui/index.html`
+---
 
-## Пример использования
+## Полезные команды
 
-1. Откройте Telegram-бота.
-2. Отправьте команду:
+Список topics:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-topics `
+  --bootstrap-server kafka-1:29092 `
+  --list
+```
+
+Описание topic:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-topics `
+  --bootstrap-server kafka-1:29092 `
+  --describe `
+  --topic link-updates
+```
+
+Чтение сообщений из topic:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-console-consumer `
+  --bootstrap-server kafka-1:29092 `
+  --topic link-updates `
+  --from-beginning
+```
+
+Чтение сообщений из DLQ:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-console-consumer `
+  --bootstrap-server kafka-1:29092 `
+  --topic link-updates-dlq `
+  --from-beginning
+```
+
+Просмотр consumer group:
+
+```powershell
+docker exec -it link-tracker-kafka-1 kafka-consumer-groups `
+  --bootstrap-server kafka-1:29092 `
+  --describe `
+  --group bot-link-updates
+```
+
+---
+
+## Основной сценарий работы
+
+1. Пользователь отправляет `/start` Telegram-боту.
+2. Bot регистрирует чат в Scrapper.
+3. Пользователь добавляет ссылку через `/track`.
+4. Scrapper сохраняет подписку в PostgreSQL.
+5. Scheduler в Scrapper периодически проверяет ссылку через GitHub или Stack Overflow API.
+6. При обнаружении обновления Scrapper публикует `LinkUpdate` в Kafka topic `link-updates`.
+7. Bot читает сообщение из Kafka.
+8. Bot отправляет уведомление пользователю в Telegram.
+9. Если обработка не удалась, сообщение попадает в `link-updates-dlq`.
+
+---
+
+## Надёжность
+
+В проекте реализованы следующие механизмы надёжности:
+
+* Kafka как асинхронная очередь между Scrapper и Bot.
+* Retry обработки Kafka-сообщений.
+* Dead Letter Queue для ошибочных сообщений.
+* Валидация входящих Kafka-сообщений.
+* Обработка ошибок десериализации.
+* Liquibase-миграции для воспроизводимой схемы БД.
+* Testcontainers для интеграционных тестов.
+* Возможность переключения между HTTP и Kafka transport.
+
+---
+
+## Примечания по безопасности
+
+Не коммитьте в Git:
 
 ```text
-/start
+.env
+*.env
 ```
 
-3. Добавьте ссылку:
+В репозиторий можно добавить только шаблон:
 
 ```text
-/track
+.env.example
 ```
 
-4. Отправьте ссылку, например:
+Все реальные токены должны храниться локально или в secret storage CI/CD.
 
-```text
-https://github.com/spring-projects/spring-boot
-```
+---
 
-5. Отправьте теги через запятую или напишите:
-
-```text
-пропустить
-```
-
-6. Посмотреть список ссылок:
-
-```text
-/list
-```
-
-7. Удалить ссылку:
-
-```text
-/untrack
-```
-
-## Запуск тестов
-
-Запустить все тесты:
-
-```bash
-./mvnw test
-```
-
-Точечно по модулям:
-
-```bash
-./mvnw -pl scrapper test
-./mvnw -pl bot test
-```
-
-## Возможные проблемы
-
-### `scrapper` не стартует из-за настроек Stack Overflow или GitHub
-
-Проверьте, что заполнены:
-
-- `GITHUB_TOKEN`
-- `STACKOVERFLOW_KEY`
-- `STACKOVERFLOW_ACCESS_KEY`
-
-### Ошибка подключения к базе данных
-
-Проверьте:
-
-- поднят ли контейнер PostgreSQL;
-- совпадают ли `DB_URL`, `DB_USER`, `DB_PASSWORD`;
-- свободен ли порт `5432`.
-
-### Бот не отвечает в Telegram
-
-Проверьте:
-
-- правильность `TELEGRAM_TOKEN`;
-- что `bot` действительно запущен;
-- что `scrapper` доступен по `http://localhost:8081`.
-
-## Безопасность
-
-Не храните реальные токены и секреты в репозитории. Для публичного GitHub-репозитория лучше:
-
-- добавить `.env` в `.gitignore`;
-- использовать `.env.example` без секретов;
-- перевыпускать токены, если они уже были случайно закоммичены.
-
-## Планы по развитию
-
-- запуск сервисов полностью через Docker Compose;
-- вынесение конфигурации в `.env.example`;
-- расширение списка поддерживаемых источников;
-- улучшение формата уведомлений и фильтрации.
