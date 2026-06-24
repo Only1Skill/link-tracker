@@ -2,10 +2,12 @@ package backend.academy.linktracker.scrapper.service.sender.impl;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import backend.academy.linktracker.scrapper.dto.LinkUpdate;
 import backend.academy.linktracker.scrapper.properties.KafkaTopicProperties;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,11 @@ class KafkaNotificationSenderTest {
 
         LinkUpdate secondUpdate = new LinkUpdate(
                 2L, "https://stackoverflow.com/questions/12345/how-to-write-tests", "Second update", List.of(300L));
+
+        when(kafkaTemplate.send(LINK_UPDATES_TOPIC, 1L, firstUpdate))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        when(kafkaTemplate.send(LINK_UPDATES_TOPIC, 2L, secondUpdate))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         sender.sendUpdates(List.of(firstUpdate, secondUpdate));
 

@@ -16,3 +16,22 @@ app:
       ttl: 1s
   notification:
     transport: HTTP
+
+  resilience:
+    timeout:
+      connect-timeout: 100ms
+      read-timeout: 500ms
+    retry:
+      max-attempts: 3
+      wait-duration: 50ms
+      retryable-statuses: 500,502,503,504
+    circuit-breaker:
+      sliding-window-size: 4
+      minimum-number-of-calls: 2
+      failure-rate-threshold: 100
+      permitted-number-of-calls-in-half-open-state: 2
+      wait-duration-in-open-state: 200ms
+  rate-limiting:
+    enabled: false
+    limit-for-period: 100
+    limit-refresh-period: 1s

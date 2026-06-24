@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpResponse;
 import tools.jackson.databind.ObjectMapper;
 
@@ -38,6 +39,7 @@ class ScrapperRestClientTest {
         ClientHttpResponse response = mock(ClientHttpResponse.class);
         String errorBody =
                 "{\"timestamp\":\"2024-01-01T00:00:00Z\",\"status\":400,\"error\":\"Bad Request\",\"message\":\"Chat already exists\",\"path\":\"/tg-chat/123\"}";
+        when(response.getStatusCode()).thenReturn(HttpStatus.BAD_REQUEST);
         when(response.getBody()).thenReturn(new ByteArrayInputStream(errorBody.getBytes(StandardCharsets.UTF_8)));
 
         Method handleError = ScrapperRestClient.class.getDeclaredMethod("handleError", ClientHttpResponse.class);
@@ -55,6 +57,7 @@ class ScrapperRestClientTest {
     @Test
     void handleError_shouldThrowScrapperClientException_withDefaultMessage_whenIOException() throws Exception {
         ClientHttpResponse response = mock(ClientHttpResponse.class);
+        when(response.getStatusCode()).thenReturn(HttpStatus.INTERNAL_SERVER_ERROR);
         when(response.getBody()).thenThrow(new IOException("Network failure"));
 
         Method handleError = ScrapperRestClient.class.getDeclaredMethod("handleError", ClientHttpResponse.class);
